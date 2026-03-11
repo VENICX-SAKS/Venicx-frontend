@@ -1,0 +1,20 @@
+name: Deploy Frontend → Staging
+on:
+  push:
+    branches: [staging]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.STAGING_API_URL }}
+      # Add Vercel or Cloud Run deploy step once infrastructure is configured
