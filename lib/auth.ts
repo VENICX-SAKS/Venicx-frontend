@@ -2,6 +2,22 @@ import Cookies from "js-cookie";
 
 const TOKEN_KEY = "venicx_token";
 
+export interface TokenPayload {
+  sub: string;
+  email: string;
+  role: "admin" | "operator" | "viewer";
+  full_name: string;
+  exp: number;
+  iat: number;
+}
+
+export interface CurrentUser {
+  id: string;
+  email: string;
+  role: "admin" | "operator" | "viewer";
+  full_name: string;
+}
+
 export function getToken(): string | null {
   return Cookies.get(TOKEN_KEY) ?? null;
 }
@@ -19,15 +35,15 @@ export function removeToken(): void {
 }
 
 export function isAuthenticated(): boolean {
-  return !!getToken();
-}
+  const token = getToken();
+  if (!token) return false;
 
-export interface TokenPayload {
-  sub: string;
-  email: string;
-  role: "admin" | "operator" | "viewer";
-  full_name: string;
-  exp: number;
+  const payload = decodeToken(token);
+  if (!payload) return false;
+
+  // Check expiry
+  const now = Math.floor(Date.now() / 1000);
+  return payload.exp > now;
 }
 
 export function decodeToken(token: string): TokenPayload | null {
@@ -37,4 +53,24 @@ export function decodeToken(token: string): TokenPayload | null {
   } catch {
     return null;
   }
+}
+
+export function getCurrentUser(): CurrentUser | null {
+  const token = getToken();
+  if (!token) return null;
+
+  const payload = decodeToken(token);
+  if (!payload) return null;
+
+  return {
+    id: payload.sub,
+    email: payload.email,
+    role: payload.role,
+    full_name: payload.full_name,
+  };
+}
+
+export function logout(): void {
+  removeToken();
+  window.location.href = "/login";
 }

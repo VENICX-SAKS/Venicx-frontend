@@ -1,11 +1,34 @@
-import { DashboardShell } from "@/components/layout/DashboardShell";
+"use client";
 
-// Temporary placeholder — will be replaced with real JWT-decoded user
-const PLACEHOLDER_USER = {
-  full_name: "Operations Admin",
-  email: "operations@venicx.com",
-};
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { DashboardShell } from "@/components/layout/DashboardShell";
+import { Spinner } from "@/components/ui/Spinner";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardShell user={PLACEHOLDER_USER}>{children}</DashboardShell>;
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/login");
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+        <Spinner className="w-8 h-8" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  return (
+    <DashboardShell user={user}>
+      {children}
+    </DashboardShell>
+  );
 }

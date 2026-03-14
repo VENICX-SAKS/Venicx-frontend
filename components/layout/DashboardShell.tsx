@@ -1,9 +1,10 @@
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import type { CurrentUser } from "@/lib/auth";
 
 interface DashboardShellProps {
   children: React.ReactNode;
-  user: { full_name: string; email: string };
+  user: CurrentUser;
 }
 
 export function DashboardShell({ children, user }: DashboardShellProps) {
