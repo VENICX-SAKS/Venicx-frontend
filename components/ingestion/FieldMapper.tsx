@@ -70,13 +70,13 @@ export function FieldMapper({
   const [templateName, setTemplateName] = useState("");
 
   useEffect(() => {
-    const guessed: Record<string, string> = {};
-    sourceColumns.forEach((col) => {
-      guessed[col] = guessMapping(col);
-    });
-    const timer = setTimeout(() => setMappings(guessed), 0);
-    return () => clearTimeout(timer);
-  }, [sourceColumns]);
+  const guessed: Record<string, string> = {};
+  sourceColumns.forEach((col) => {
+    guessed[col] = guessMapping(col);
+  });
+  const timer = setTimeout(() => setMappings(guessed), 0);
+  return () => clearTimeout(timer);
+}, [sourceColumns]);
 
   const loadTemplate = (template: MappingTemplate) => {
     const newMappings: Record<string, string> = {};
