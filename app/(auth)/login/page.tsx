@@ -37,9 +37,15 @@ export default function LoginPage() {
       window.location.href = "/";
     } catch (e) {
       if (e instanceof ApiError) {
-        setError(e.status === 401 ? "Invalid email or password" : e.message);
+        setError(
+          e.status === 401
+            ? "Invalid email or password"
+            : `Error ${e.status}: ${e.message} (code: ${e.code})`
+        );
+      } else if (e instanceof TypeError && (e.message.includes("fetch") || e.message.includes("network"))) {
+        setError(`Network error — cannot reach the backend. Check that NEXT_PUBLIC_API_URL is set correctly. (${e.message})`);
       } else {
-        setError("An unexpected error occurred. Please try again.");
+        setError(`Unexpected error: ${e instanceof Error ? e.message : String(e)}`);
       }
     } finally {
       setLoading(false);
@@ -59,6 +65,12 @@ export default function LoginPage() {
 
           <h2 className="text-lg font-semibold text-neutral-900 mb-1">Sign in</h2>
           <p className="text-sm text-neutral-500 mb-6">Enter your credentials to continue</p>
+
+          {process.env.NODE_ENV !== "production" && (
+            <p className="text-xs text-neutral-400 mb-4 font-mono break-all">
+              API: {process.env.NEXT_PUBLIC_API_URL ?? "not set"}
+            </p>
+          )}
 
           <div className="flex flex-col gap-4">
             <Input
