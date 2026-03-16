@@ -70,8 +70,23 @@ export function useMapFields() {
       partner_name?: string;
       save_template?: { name: string; partner_name?: string };
     }) => api.post("/api/v1/ingestion/map", body),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["ingestion"] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ingestion"] }),
+  });
+}
+
+export function useCancelBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) => api.post(`/api/v1/ingestion/cancel/${batchId}`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ingestion"] }),
+  });
+}
+
+export function useRetryBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) =>
+      api.post<{ batch_id: string; status: string }>(`/api/v1/ingestion/retry/${batchId}`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ingestion"] }),
   });
 }

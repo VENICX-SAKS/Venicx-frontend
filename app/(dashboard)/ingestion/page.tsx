@@ -7,7 +7,7 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Modal } from "@/components/ui/Modal";
 import { FieldMapper } from "@/components/ingestion/FieldMapper";
 import { ProcessingPipeline } from "@/components/ingestion/ProcessingPipeline";
-import { useBatchList, useUploadFile, useMapFields, useTemplates } from "@/hooks/useIngestion";
+import { useBatchList, useUploadFile, useMapFields, useTemplates, useCancelBatch, useRetryBatch } from "@/hooks/useIngestion";
 import type { BatchStatus } from "@/hooks/useIngestion";
 import { formatNumber } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
@@ -101,22 +101,64 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-function BatchRow({ batch, onClick }: { batch: BatchStatus; onClick: () => void }) {
+function BatchRow({
+  batch,
+  onClick,
+  onCancel,
+  onRetry,
+  onResumeMapping,
+}: {
+  batch: BatchStatus;
+  onClick: () => void;
+  onCancel: () => void;
+  onRetry: () => void;
+  onResumeMapping: () => void;
+}) {
   const progress =
     batch.total_rows && batch.total_rows > 0
       ? Math.round(((batch.processed_rows + batch.failed_rows) / batch.total_rows) * 100)
       : 0;
 
+  const canCancel = ["mapping", "pending", "processing"].includes(batch.status);
+  const canRetry = ["failed", "cancelled"].includes(batch.status);
+  const canResumeMapping = batch.status === "mapping";
+
   return (
-    <div
-      className="px-5 py-4 flex flex-col gap-2 hover:bg-neutral-50 cursor-pointer transition-colors"
-      onClick={onClick}
-    >
-      {/* Row 1: icon + filename + badge */}
+    <div className="px-5 py-4 flex flex-col gap-2 hover:bg-neutral-50 transition-colors">
+      {/* Row 1: icon + filename + badge + actions */}
       <div className="flex items-center gap-3">
-        <StatusIcon status={batch.status} />
-        <span className="text-sm font-medium text-neutral-900">{batch.filename}</span>
-        <StatusPill status={batch.status} />
+        <div className="cursor-pointer flex items-center gap-3 flex-1 min-w-0" onClick={onClick}>
+          <StatusIcon status={batch.status} />
+          <span className="text-sm font-medium text-neutral-900 truncate">{batch.filename}</span>
+          <StatusPill status={batch.status} />
+        </div>
+        {/* Action buttons */}
+        <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          {canResumeMapping && (
+            <button
+              onClick={onResumeMapping}
+              className="text-xs px-2.5 py-1 rounded-lg border border-primary text-primary hover:bg-primary/5 transition-colors"
+            >
+              Map Fields
+            </button>
+          )}
+          {canRetry && (
+            <button
+              onClick={onRetry}
+              className="text-xs px-2.5 py-1 rounded-lg border border-success text-success hover:bg-success/5 transition-colors"
+            >
+              Retry
+            </button>
+          )}
+          {canCancel && (
+            <button
+              onClick={onCancel}
+              className="text-xs px-2.5 py-1 rounded-lg border border-neutral-200 text-neutral-500 hover:border-error hover:text-error transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Row 2: meta */}
@@ -175,6 +217,8 @@ export default function IngestionPage() {
   const { data: templates } = useTemplates();
   const { mutateAsync: uploadFile, isPending: uploading } = useUploadFile();
   const { mutateAsync: mapFields, isPending: mapping } = useMapFields();
+  const { mutateAsync: cancelBatch } = useCancelBatch();
+  const { mutateAsync: retryBatch } = useRetryBatch();
 
   const handleFile = async (file: File) => {
     setUploadError(null);
@@ -325,6 +369,19 @@ export default function IngestionPage() {
                 key={batch.id}
                 batch={batch}
                 onClick={() => setPipelineBatchId(batch.id)}
+                onCancel={async () => {
+                  await cancelBatch(batch.id);
+                }}
+                onRetry={async () => {
+                  const result = await retryBatch(batch.id);
+                  // If retried back to mapping, open the mapping modal
+                  if (result.status === "mapping") {
+                    setMappingModal({ batchId: batch.id, columns: [] });
+                  }
+                }}
+                onResumeMapping={() => {
+                  setMappingModal({ batchId: batch.id, columns: [] });
+                }}
               />
             ))
           )}
@@ -335,7 +392,7 @@ export default function IngestionPage() {
       <Modal
         open={!!mappingModal}
         onClose={() => setMappingModal(null)}
-        title="Map Fields"
+        title={mappingModal?.columns.length === 0 ? "Resume Field Mapping" : "Map Fields"}
         className="max-w-2xl"
       >
         {mappingModal && (
