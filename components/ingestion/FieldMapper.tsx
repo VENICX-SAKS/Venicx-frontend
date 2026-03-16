@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   CANONICAL_FIELDS,
   IDENTITY_FIELDS,
@@ -64,19 +64,16 @@ export function FieldMapper({
   onSubmit,
   loading,
 }: FieldMapperProps) {
-  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const defaultMappings = useMemo(() => {
+    const guessed: Record<string, string> = {};
+    sourceColumns.forEach((col) => { guessed[col] = guessMapping(col); });
+    return guessed;
+  }, [sourceColumns]);
+
+  const [mappings, setMappings] = useState<Record<string, string>>(defaultMappings);
   const [partnerName, setPartnerName] = useState("");
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
-
-  useEffect(() => {
-  const guessed: Record<string, string> = {};
-  sourceColumns.forEach((col) => {
-    guessed[col] = guessMapping(col);
-  });
-  const timer = setTimeout(() => setMappings(guessed), 0);
-  return () => clearTimeout(timer);
-}, [sourceColumns]);
 
   const loadTemplate = (template: MappingTemplate) => {
     const newMappings: Record<string, string> = {};

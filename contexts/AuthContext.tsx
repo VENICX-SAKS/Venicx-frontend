@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 import { CurrentUser, getCurrentUser, isAuthenticated, logout } from "@/lib/auth";
 
 interface AuthContextValue {
@@ -16,17 +16,12 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-  const currentUser = isAuthenticated() ? getCurrentUser() : null;
-  setUser(currentUser);
-  setIsLoading(false);
-}, []);
+  const [user] = useState<CurrentUser | null>(() =>
+    isAuthenticated() ? getCurrentUser() : null
+  );
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, logout }}>
+    <AuthContext.Provider value={{ user, isLoading: false, logout }}>
       {children}
     </AuthContext.Provider>
   );
