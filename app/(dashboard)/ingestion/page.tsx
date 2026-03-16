@@ -27,6 +27,21 @@ function parseCsvHeaders(file: File): Promise<string[]> {
   });
 }
 
+// Parse XLSX headers client-side using SheetJS (reads only first row)
+async function parseXlsxHeaders(file: File): Promise<string[]> {
+  try {
+    const XLSX = await import("xlsx");
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: "array", sheetRows: 1 });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    if (!ws) return [];
+    const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 });
+    return (rows[0] ?? []).map(String).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 // Parse JSON keys client-side — reads first object's keys
 function parseJsonKeys(file: File): Promise<string[]> {
   return new Promise((resolve) => {
@@ -235,6 +250,7 @@ export default function IngestionPage() {
     try {
       let columns: string[] = [];
       if (ext.endsWith(".csv"))  columns = await parseCsvHeaders(file);
+      if (ext.endsWith(".xlsx")) columns = await parseXlsxHeaders(file);
       if (ext.endsWith(".json")) columns = await parseJsonKeys(file);
 
       const formData = new FormData();
@@ -244,7 +260,7 @@ export default function IngestionPage() {
       refetchBatches();
       setMappingModal({
         batchId: res.batch_id,
-        columns: columns.length > 0 ? columns : ["First Name", "Last Name", "Phone Number", "Email", "ID Number", "Date of Birth", "City", "Province"],
+        columns: columns.length > 0 ? columns : [],
       });
     } catch (e) {
       setUploadError(e instanceof ApiError ? e.message : "Upload failed. Please try again.");
@@ -374,13 +390,12 @@ export default function IngestionPage() {
                 }}
                 onRetry={async () => {
                   const result = await retryBatch(batch.id);
-                  // If retried back to mapping, open the mapping modal
                   if (result.status === "mapping") {
-                    setMappingModal({ batchId: batch.id, columns: [] });
+                    setMappingModal({ batchId: batch.id, columns: batch.source_columns });
                   }
                 }}
                 onResumeMapping={() => {
-                  setMappingModal({ batchId: batch.id, columns: [] });
+                  setMappingModal({ batchId: batch.id, columns: batch.source_columns });
                 }}
               />
             ))

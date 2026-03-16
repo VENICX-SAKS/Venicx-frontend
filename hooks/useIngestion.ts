@@ -12,6 +12,7 @@ export interface BatchStatus {
   merged_rows: number;
   progress_percent: number;
   partner_name: string | null;
+  source_columns: string[];
   created_at: string;
   completed_at: string | null;
 }
