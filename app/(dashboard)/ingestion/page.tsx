@@ -391,11 +391,11 @@ export default function IngestionPage() {
                 onRetry={async () => {
                   const result = await retryBatch(batch.id);
                   if (result.status === "mapping") {
-                    setMappingModal({ batchId: batch.id, columns: batch.source_columns });
+                    setMappingModal({ batchId: batch.id, columns: batch.source_columns ?? [] });
                   }
                 }}
                 onResumeMapping={() => {
-                  setMappingModal({ batchId: batch.id, columns: batch.source_columns });
+                  setMappingModal({ batchId: batch.id, columns: batch.source_columns ?? [] });
                 }}
               />
             ))
