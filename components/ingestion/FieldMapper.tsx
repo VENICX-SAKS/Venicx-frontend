@@ -74,7 +74,8 @@ export function FieldMapper({
     sourceColumns.forEach((col) => {
       guessed[col] = guessMapping(col);
     });
-    setMappings(guessed);
+    const timer = setTimeout(() => setMappings(guessed), 0);
+    return () => clearTimeout(timer);
   }, [sourceColumns]);
 
   const loadTemplate = (template: MappingTemplate) => {
