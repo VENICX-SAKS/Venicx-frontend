@@ -63,7 +63,7 @@ export function ActivityCharts({ dailyRecords, dailyCommunications, isLoading }:
                 name="Records"
                 stroke="#3B5BFF"
                 strokeWidth={2}
-                dot={{ fill: "#3B5BFF", r: 4 }}
+                dot={{ fill: "#3B5BFF", r: 4, strokeWidth: 0 }}
                 activeDot={{ r: 5 }}
               />
               <Line
@@ -72,7 +72,7 @@ export function ActivityCharts({ dailyRecords, dailyCommunications, isLoading }:
                 name="Uploads"
                 stroke="#10B981"
                 strokeWidth={2}
-                dot={{ fill: "#10B981", r: 4 }}
+                dot={{ fill: "#10B981", r: 4, strokeWidth: 0 }}
                 activeDot={{ r: 5 }}
               />
             </LineChart>
