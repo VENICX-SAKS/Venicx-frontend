@@ -136,14 +136,16 @@ export default function EmailTemplatesPage() {
             <p className="text-sm text-neutral-500">Manage templated email communications</p>
           </div>
         </div>
-        <Button variant="black" onClick={() => setSaved(true)}>
-          <Mail className="w-4 h-4" />
-          {saved ? "Saved!" : "Save Template"}
-        </Button>
-        <Button variant="primary" onClick={() => setShowConfirm(true)} disabled={!subject || !content}>
-          <Send className="w-4 h-4" />
-          Send Campaign
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="black" onClick={() => setSaved(true)}>
+            <Mail className="w-4 h-4" />
+            {saved ? "Saved!" : "Save Template"}
+          </Button>
+          <Button variant="primary" onClick={() => setShowConfirm(true)} disabled={!subject || !content}>
+            <Send className="w-4 h-4" />
+            Send Campaign
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
