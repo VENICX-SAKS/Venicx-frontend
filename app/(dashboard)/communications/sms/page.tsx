@@ -2,12 +2,14 @@
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send, Users, MessageSquare, DollarSign } from "lucide-react";
+import { ArrowLeft, Send, Users, MessageSquare, DollarSign, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { formatNumber, formatCurrency } from "@/lib/utils";
 import { useDashboardMetrics } from "@/hooks/useDashboard";
+import { useMutation } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 
 const SMS_RATE = 0.5;
 const VARIABLES = [
@@ -38,12 +40,21 @@ function renderPreview(message: string) {
     .replace(/{{province}}/g, SAMPLE.province);
 }
 
+interface CampaignResult {
+  campaign_name: string;
+  total_attempted: number;
+  sent: number;
+  failed: number;
+  skipped_no_consent: number;
+}
+
 export default function NewSmsCampaignPage() {
   const [name, setName] = useState("");
-  const [audience, setAudience] = useState("all");
+  const [audience, setAudience] = useState("consent");
   const [message, setMessage] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [result, setResult] = useState<CampaignResult | null>(null);
+  const [sendError, setSendError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: metrics } = useDashboardMetrics();
@@ -52,6 +63,11 @@ export default function NewSmsCampaignPage() {
   const estimatedCost = recipients * segments * SMS_RATE;
   const charsRemaining = getCharsRemaining(message);
   const preview = renderPreview(message);
+
+  const { mutateAsync: sendCampaign, isPending: sending } = useMutation({
+    mutationFn: (body: { campaign_name: string; message: string; audience: string }) =>
+      api.post<CampaignResult>("/api/v1/communication/sms/campaign", body),
+  });
 
   const insertVariable = useCallback((variable: string) => {
     const el = textareaRef.current;
@@ -66,14 +82,30 @@ export default function NewSmsCampaignPage() {
     }, 0);
   }, [message]);
 
-  if (sent) {
+  const handleConfirmSend = async () => {
+    setSendError("");
+    try {
+      const res = await sendCampaign({ campaign_name: name, message, audience });
+      setResult(res);
+      setShowConfirm(false);
+    } catch (e) {
+      setSendError(e instanceof ApiError ? e.message : "Failed to send campaign");
+      setShowConfirm(false);
+    }
+  };
+
+  if (result) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center">
           <Send className="w-8 h-8 text-success" />
         </div>
         <h2 className="text-lg font-semibold text-neutral-900">Campaign Sent!</h2>
-        <p className="text-sm text-neutral-500">Your SMS campaign has been queued for sending.</p>
+        <div className="text-sm text-neutral-600 text-center space-y-1">
+          <p>Sent: <strong>{formatNumber(result.sent)}</strong></p>
+          <p>Failed: <strong>{result.failed}</strong></p>
+          <p>Skipped (no consent): <strong>{result.skipped_no_consent}</strong></p>
+        </div>
         <Link href="/communications">
           <Button variant="primary">Back to Communications</Button>
         </Link>
@@ -241,7 +273,7 @@ export default function NewSmsCampaignPage() {
               Estimated cost: <strong>{formatCurrency(estimatedCost)}</strong>
             </p>
             <div className="flex gap-2">
-              <Button variant="black" className="flex-1" onClick={() => { setShowConfirm(false); setSent(true); }}>
+              <Button variant="black" className="flex-1" loading={sending} onClick={handleConfirmSend}>
                 Confirm &amp; Send
               </Button>
               <Button variant="secondary" className="flex-1" onClick={() => setShowConfirm(false)}>
@@ -249,6 +281,13 @@ export default function NewSmsCampaignPage() {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {sendError && (
+        <div className="fixed bottom-6 right-6 bg-error text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-50">
+          <AlertCircle className="w-4 h-4" />
+          <span className="text-sm">{sendError}</span>
         </div>
       )}
     </div>

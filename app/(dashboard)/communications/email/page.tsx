@@ -2,10 +2,12 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Mail, Send, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { useMutation } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 
 const DEFAULT_TEMPLATES = [
   {
@@ -69,7 +71,32 @@ export default function EmailTemplatesPage() {
   const [trackClicks, setTrackClicks] = useState(true);
   const [updateRecord, setUpdateRecord] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [sendResult, setSendResult] = useState<{ sent: number; failed: number; skipped_no_consent: number } | null>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  const { mutateAsync: sendCampaign, isPending: sending } = useMutation({
+    mutationFn: (body: { campaign_name: string; subject: string; html_body: string; audience: string }) =>
+      api.post<{ sent: number; failed: number; skipped_no_consent: number }>("/api/v1/communication/email/campaign", body),
+  });
+
+  const handleSendCampaign = async () => {
+    setSendError("");
+    try {
+      const res = await sendCampaign({
+        campaign_name: selected.name,
+        subject,
+        html_body: content.replace(/\n/g, "<br>"),
+        audience: "consent",
+      });
+      setSendResult(res);
+      setShowConfirm(false);
+    } catch (e) {
+      setSendError(e instanceof ApiError ? e.message : "Failed to send campaign");
+      setShowConfirm(false);
+    }
+  };
 
   const selectTemplate = (t: typeof DEFAULT_TEMPLATES[0]) => {
     setSelected(t);
@@ -112,6 +139,10 @@ export default function EmailTemplatesPage() {
         <Button variant="black" onClick={() => setSaved(true)}>
           <Mail className="w-4 h-4" />
           {saved ? "Saved!" : "Save Template"}
+        </Button>
+        <Button variant="primary" onClick={() => setShowConfirm(true)} disabled={!subject || !content}>
+          <Send className="w-4 h-4" />
+          Send Campaign
         </Button>
       </div>
 
@@ -268,6 +299,41 @@ export default function EmailTemplatesPage() {
           </Card>
         </div>
       </div>
+
+      {/* Send result */}
+      {sendResult && (
+        <div className="fixed bottom-6 right-6 bg-success text-white px-4 py-3 rounded-xl shadow-lg z-50 text-sm">
+          Campaign sent — {sendResult.sent} delivered, {sendResult.failed} failed, {sendResult.skipped_no_consent} skipped
+        </div>
+      )}
+
+      {/* Error toast */}
+      {sendError && (
+        <div className="fixed bottom-6 right-6 bg-error text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-50">
+          <AlertCircle className="w-4 h-4" />
+          <span className="text-sm">{sendError}</span>
+        </div>
+      )}
+
+      {/* Confirm modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-base font-semibold text-neutral-900 mb-2">Send Email Campaign</h3>
+            <p className="text-sm text-neutral-600 mb-4">
+              Send <strong>&ldquo;{subject}&rdquo;</strong> to all customers with email consent granted via SendGrid.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="primary" className="flex-1" loading={sending} onClick={handleSendCampaign}>
+                <Send className="w-4 h-4" /> Confirm &amp; Send
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setShowConfirm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
