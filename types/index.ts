@@ -111,6 +111,10 @@ export interface DashboardMetrics {
   duplicate_merge_rate: number;
   sms_sent_last_7_days: number;
   email_engagement_rate: number;
+  // Previous period for change calculation
+  total_super_records_prev: number;
+  leads_ingested_prev_week: number;
+  sms_sent_prev_7_days: number;
 }
 
 export interface DailyActivityPoint {
