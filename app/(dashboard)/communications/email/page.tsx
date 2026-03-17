@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { useMutation } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { RecipientPicker, type AudienceMode } from "@/components/communication/RecipientPicker";
 
 const DEFAULT_TEMPLATES = [
   {
@@ -74,11 +76,20 @@ export default function EmailTemplatesPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [sendError, setSendError] = useState("");
   const [sendResult, setSendResult] = useState<{ sent: number; failed: number; skipped_no_consent: number } | null>(null);
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>("consent");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [testEmailSent, setTestEmailSent] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  const { user } = useAuth();
 
   const { mutateAsync: sendCampaign, isPending: sending } = useMutation({
-    mutationFn: (body: { campaign_name: string; subject: string; html_body: string; audience: string }) =>
+    mutationFn: (body: { campaign_name: string; subject: string; html_body: string; audience: string; customer_ids?: string[] }) =>
       api.post<{ sent: number; failed: number; skipped_no_consent: number }>("/api/v1/communication/email/campaign", body),
+  });
+
+  const { mutateAsync: sendTestEmail, isPending: testSending } = useMutation({
+    mutationFn: (body: { to_email: string; subject: string; html_body: string }) =>
+      api.post("/api/v1/communication/email/test", body),
   });
 
   const handleSendCampaign = async () => {
@@ -88,13 +99,29 @@ export default function EmailTemplatesPage() {
         campaign_name: selected.name,
         subject,
         html_body: content.replace(/\n/g, "<br>"),
-        audience: "consent",
+        audience: audienceMode,
+        customer_ids: audienceMode === "selected" ? selectedIds : undefined,
       });
       setSendResult(res);
       setShowConfirm(false);
     } catch (e) {
       setSendError(e instanceof ApiError ? e.message : "Failed to send campaign");
       setShowConfirm(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!user?.email) return;
+    try {
+      await sendTestEmail({
+        to_email: user.email,
+        subject,
+        html_body: content.replace(/\n/g, "<br>"),
+      });
+      setTestEmailSent(true);
+      setTimeout(() => setTestEmailSent(false), 3000);
+    } catch (e) {
+      setSendError(e instanceof ApiError ? e.message : "Failed to send test email");
     }
   };
 
@@ -218,6 +245,18 @@ export default function EmailTemplatesPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Recipient picker */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-neutral-700">Target Audience</label>
+                <RecipientPicker
+                  channel="email"
+                  mode={audienceMode}
+                  onModeChange={setAudienceMode}
+                  selectedIds={selectedIds}
+                  onSelectedChange={setSelectedIds}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -226,7 +265,9 @@ export default function EmailTemplatesPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-neutral-900">Email Preview</h3>
-                <Button variant="secondary" size="sm">Send Test Email</Button>
+                <Button variant="secondary" size="sm" loading={testSending} onClick={handleTestEmail}>
+                  {testEmailSent ? "Sent!" : `Send Test to ${user?.email ?? "me"}`}
+                </Button>
               </div>
             </CardHeader>
             <CardContent>

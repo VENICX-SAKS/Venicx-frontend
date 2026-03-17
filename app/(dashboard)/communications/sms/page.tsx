@@ -10,6 +10,7 @@ import { formatNumber, formatCurrency } from "@/lib/utils";
 import { useDashboardMetrics } from "@/hooks/useDashboard";
 import { useMutation } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
+import { RecipientPicker, type AudienceMode } from "@/components/communication/RecipientPicker";
 
 const SMS_RATE = 0.5;
 const VARIABLES = [
@@ -50,7 +51,8 @@ interface CampaignResult {
 
 export default function NewSmsCampaignPage() {
   const [name, setName] = useState("");
-  const [audience, setAudience] = useState("consent");
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>("consent");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [result, setResult] = useState<CampaignResult | null>(null);
@@ -58,14 +60,14 @@ export default function NewSmsCampaignPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: metrics } = useDashboardMetrics();
-  const recipients = metrics?.total_super_records ?? 0;
+  const recipients = audienceMode === "selected" ? selectedIds.length : (metrics?.total_super_records ?? 0);
   const segments = getSmsSegments(message);
   const estimatedCost = recipients * segments * SMS_RATE;
   const charsRemaining = getCharsRemaining(message);
   const preview = renderPreview(message);
 
   const { mutateAsync: sendCampaign, isPending: sending } = useMutation({
-    mutationFn: (body: { campaign_name: string; message: string; audience: string }) =>
+    mutationFn: (body: { campaign_name: string; message: string; audience: string; customer_ids?: string[] }) =>
       api.post<CampaignResult>("/api/v1/communication/sms/campaign", body),
   });
 
@@ -85,7 +87,12 @@ export default function NewSmsCampaignPage() {
   const handleConfirmSend = async () => {
     setSendError("");
     try {
-      const res = await sendCampaign({ campaign_name: name, message, audience });
+      const res = await sendCampaign({
+        campaign_name: name,
+        message,
+        audience: audienceMode,
+        customer_ids: audienceMode === "selected" ? selectedIds : undefined,
+      });
       setResult(res);
       setShowConfirm(false);
     } catch (e) {
@@ -144,14 +151,13 @@ export default function NewSmsCampaignPage() {
 
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-neutral-700">Target Audience</label>
-                <select
-                  value={audience}
-                  onChange={e => setAudience(e.target.value)}
-                  className="border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="all">All Super Records</option>
-                  <option value="consent">SMS Consent Granted Only</option>
-                </select>
+                <RecipientPicker
+                  channel="sms"
+                  mode={audienceMode}
+                  onModeChange={setAudienceMode}
+                  selectedIds={selectedIds}
+                  onSelectedChange={setSelectedIds}
+                />
               </div>
 
               <div className="flex flex-col gap-1">
