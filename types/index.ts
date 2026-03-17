@@ -53,8 +53,12 @@ export interface SuperRecord {
     first_name: string | null;
     last_name: string | null;
     date_of_birth: string | null;
+    gender: string | null;
+    address_line_1: string | null;
     city: string | null;
     province: string | null;
+    postal_code: string | null;
+    country: string | null;
   };
   consent: {
     sms: ConsentStatus;
@@ -67,7 +71,7 @@ export interface SuperRecord {
 }
 
 export interface ConsentStatus {
-  status: "granted" | "revoked" | "pending" | null;
+  status: string | null;
   granted_at: string | null;
   revoked_at: string | null;
 }
@@ -77,20 +81,25 @@ export interface LeadHistoryEntry {
   filename: string;
   partner_name: string | null;
   ingested_at: string;
+  merge_action: string | null;
 }
 
 export interface CommunicationHistoryEntry {
   id: string;
-  channel: "sms" | "email";
+  channel: string;
   status: string;
+  provider: string;
   sent_at: string | null;
+  delivered_at: string | null;
   cost_amount: string | null;
+  cost_currency: string | null;
 }
 
 export interface MergeHistoryEntry {
-  merge_type: "deterministic" | "probabilistic" | "manual";
+  merge_type: string;
   match_field: string | null;
   confidence_score: number | null;
+  decision: string;
   merged_at: string;
 }
 
