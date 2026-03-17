@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MessageSquare, Mail, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -14,10 +15,12 @@ export function ActionCards() {
             Create and manage SMS campaigns via SMSPortal
           </p>
         </div>
-        <Button variant="black" size="sm" className="flex-shrink-0">
-          <Plus className="w-4 h-4" />
-          New Campaign
-        </Button>
+        <Link href="/communications/sms" className="flex-shrink-0">
+          <Button variant="black" size="sm">
+            <Plus className="w-4 h-4" />
+            New Campaign
+          </Button>
+        </Link>
       </div>
 
       <div className="bg-white border border-neutral-200 rounded-xl p-5 flex items-center gap-4">
@@ -30,10 +33,12 @@ export function ActionCards() {
             Manage templated emails and campaigns
           </p>
         </div>
-        <Button variant="black" size="sm" className="flex-shrink-0">
-          <Plus className="w-4 h-4" />
-          New Template
-        </Button>
+        <Link href="/communications/email" className="flex-shrink-0">
+          <Button variant="black" size="sm">
+            <Plus className="w-4 h-4" />
+            New Template
+          </Button>
+        </Link>
       </div>
     </div>
   );
