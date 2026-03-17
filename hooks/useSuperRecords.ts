@@ -15,6 +15,7 @@ export interface SearchResult {
   email_consent: string | null;
   created_at: string;
   lead_count: number;
+  ltv_zar: number;
 }
 
 export interface SearchResponse {
@@ -32,6 +33,38 @@ export function useSuperRecordSearch(q: string, page: number) {
         `/api/v1/super-record/search?q=${encodeURIComponent(q)}&page=${page}&limit=20`
       ),
     placeholderData: (prev) => prev,
+  });
+}
+
+export interface MergeSuggestion {
+  id: string;
+  confidence: number;
+  match_field: string | null;
+  primary: { id: string; name: string; msisdn_last4: string | null; city: string | null };
+  duplicate: { id: string; name: string; msisdn_last4: string | null; city: string | null };
+}
+
+export function useMergeSuggestions() {
+  return useQuery({
+    queryKey: ["super-records", "merge-suggestions"],
+    queryFn: () => api.get<MergeSuggestion[]>("/api/v1/super-record/merge-suggestions"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useAcceptMerge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/api/v1/super-record/merge-suggestions/${id}/accept`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["super-records"] }),
+  });
+}
+
+export function useRejectMerge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post(`/api/v1/super-record/merge-suggestions/${id}/reject`, {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["super-records"] }),
   });
 }
 

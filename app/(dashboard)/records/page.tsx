@@ -70,7 +70,7 @@ function CustomerCard({ record }: { record: SearchResult }) {
         <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500">
           {record.province && <span>{record.province}</span>}
           <span>{record.lead_count} interaction{record.lead_count !== 1 ? "s" : ""}</span>
-          <span>LTV: R0</span>
+          <span>LTV: {record.ltv_zar > 0 ? formatCurrency(record.ltv_zar) : "R0"}</span>
         </div>
 
         {/* Score bars */}
@@ -186,6 +186,9 @@ export default function RecordsPage() {
   const { data, isLoading } = useSuperRecordSearch(debouncedQuery, page);
 
   const total = data?.total ?? 0;
+  const avgLtv = data?.data && data.data.length > 0
+    ? data.data.reduce((sum, r) => sum + r.ltv_zar, 0) / data.data.length
+    : 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -223,7 +226,7 @@ export default function RecordsPage() {
           },
           {
             label: "Avg Lifetime Value",
-            value: "R0",
+            value: formatCurrency(avgLtv),
             icon: <TrendingUp className="w-5 h-5" />,
             iconBg: "bg-success/10",
             iconColor: "text-success",
