@@ -340,7 +340,7 @@ export default function IngestionPage() {
         </div>
 
         {/* Format type hints */}
-        <div className="grid grid-cols-3 divide-x divide-neutral-100 border-t border-neutral-100">
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-neutral-100 border-t border-neutral-100">
           {[
             { icon: <FileText className="w-4 h-4 text-primary" />, label: "CSV Upload", sub: "Bulk lead imports" },
             { icon: <Table2 className="w-4 h-4 text-success" />, label: "Excel Import", sub: "Call centre dumps" },

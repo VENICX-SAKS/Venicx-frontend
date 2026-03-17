@@ -11,7 +11,7 @@ interface MetricsRowProps {
 export function MetricsRow({ data, isLoading }: MetricsRowProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-white rounded-xl border border-neutral-200 h-32 animate-pulse" />
         ))}
@@ -51,7 +51,7 @@ export function MetricsRow({ data, isLoading }: MetricsRowProps) {
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
       {metrics.map((m) => (
         <MetricCard key={m.label} {...m} />
       ))}

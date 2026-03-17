@@ -17,7 +17,7 @@ interface ActivityChartsProps {
 export function ActivityCharts({ dailyRecords, dailyCommunications, isLoading }: ActivityChartsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-neutral-200 h-72 animate-pulse" />
         <div className="bg-white rounded-xl border border-neutral-200 h-72 animate-pulse" />
       </div>
@@ -25,7 +25,7 @@ export function ActivityCharts({ dailyRecords, dailyCommunications, isLoading }:
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Records & Uploads line chart */}
       <Card>
         <CardContent className="pt-5">
