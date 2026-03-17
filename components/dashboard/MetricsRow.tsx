@@ -8,9 +8,11 @@ interface MetricsRowProps {
   isLoading: boolean;
 }
 
-function pctChange(current: number, previous: number): { label: string; positive: boolean } | null {
+function pctChange(current: number | undefined, previous: number | undefined): { label: string; positive: boolean } | null {
+  if (current == null || previous == null || isNaN(current) || isNaN(previous)) return null;
   if (previous === 0) return current > 0 ? { label: "New this period", positive: true } : null;
   const change = ((current - previous) / previous) * 100;
+  if (isNaN(change) || !isFinite(change)) return null;
   const sign = change >= 0 ? "+" : "";
   return {
     label: `${sign}${change.toFixed(1)}% vs last period`,
