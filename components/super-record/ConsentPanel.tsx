@@ -34,9 +34,9 @@ export function ConsentPanel({ customerId, consent }: ConsentPanelProps) {
               "border-neutral-200 bg-white"
             }`}
           >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                   isGranted ? "bg-success/10" : isRevoked ? "bg-error/10" : "bg-neutral-100"
                 }`}>
                   <Icon className={`w-4 h-4 ${
@@ -47,17 +47,17 @@ export function ConsentPanel({ customerId, consent }: ConsentPanelProps) {
               </div>
 
               {isGranted ? (
-                <div className="flex items-center gap-1 text-success">
+                <div className="flex items-center gap-1 text-success flex-shrink-0">
                   <CheckCircle className="w-4 h-4" />
                   <span className="text-xs font-medium">Granted</span>
                 </div>
               ) : isRevoked ? (
-                <div className="flex items-center gap-1 text-error">
+                <div className="flex items-center gap-1 text-error flex-shrink-0">
                   <XCircle className="w-4 h-4" />
                   <span className="text-xs font-medium">Revoked</span>
                 </div>
               ) : (
-                <span className="text-xs text-neutral-400">Not set</span>
+                <span className="text-xs text-neutral-400 flex-shrink-0">Not set</span>
               )}
             </div>
 
