@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Eye, Users, AlertTriangle, TrendingUp, Search } from "lucide-react";
-import { useSuperRecordSearch, useMergeSuggestions, useAcceptMerge, useRejectMerge } from "@/hooks/useSuperRecords";
+import { useSuperRecordSearch } from "@/hooks/useSuperRecords";
+import { useMergeSuggestions } from "@/hooks/useMergeSuggestions";
+import { MergeSuggestions } from "@/components/super-record/MergeSuggestions";
 import { Pagination } from "@/components/super-record/Pagination";
 import { formatNumber, formatCurrency, cn } from "@/lib/utils";
-import type { SearchResult, MergeSuggestion } from "@/hooks/useSuperRecords";
+import type { SearchResult } from "@/hooks/useSuperRecords";
 
 // ── Score bar ─────────────────────────────────────────────────────────────────
 
@@ -93,80 +95,6 @@ function CustomerCard({ record }: { record: SearchResult }) {
   );
 }
 
-// ── Merge suggestion card ─────────────────────────────────────────────────────
-
-function MergeSuggestionCard({ suggestion, onAccept, onReject }: {
-  suggestion: MergeSuggestion;
-  onAccept: () => void;
-  onReject: () => void;
-}) {
-  const confidenceColor =
-    suggestion.confidence >= 0.90
-      ? "bg-success/10 text-success border-success/30"
-      : suggestion.confidence >= 0.75
-      ? "bg-warning/10 text-warning border-warning/30"
-      : "bg-neutral-100 text-neutral-600 border-neutral-200";
-
-  return (
-    <div className="border border-warning/20 bg-warning/5 rounded-xl p-4 flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={cn("text-xs px-2 py-0.5 rounded-full border font-medium", confidenceColor)}>
-            {(suggestion.confidence * 100).toFixed(0)}% match confidence
-          </span>
-          {suggestion.match_field && (
-            <span className="text-xs text-warning font-medium">
-              Matched on {suggestion.match_field}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onReject}
-            className="text-xs px-3 py-1.5 border border-neutral-300 text-neutral-600 rounded-lg hover:bg-neutral-50 transition-colors"
-          >
-            Reject
-          </button>
-          <button
-            onClick={onAccept}
-            className="text-xs px-3 py-1.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors font-medium"
-          >
-            Merge
-          </button>
-        </div>
-      </div>
-
-      {/* Records side by side */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: "Primary Record", data: suggestion.primary },
-          { label: "Duplicate Record", data: suggestion.duplicate },
-        ].map(({ label, data }) => (
-          <div key={label} className="bg-white rounded-lg border border-neutral-200 p-3">
-            <p className="text-xs text-neutral-400 mb-1">{label}</p>
-            <p className="text-sm font-semibold text-neutral-900">{data.name}</p>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              {data.msisdn_last4 ? `···${data.msisdn_last4}` : "—"} · {data.city ?? "—"}
-            </p>
-            <p className="text-xs text-neutral-400 mt-0.5">ID: {data.id.slice(0, 8)}...</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Matched field */}
-      {suggestion.match_field && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-neutral-500">Matched on:</span>
-          <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded font-mono">
-            {suggestion.match_field}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RecordsPage() {
@@ -184,11 +112,9 @@ export default function RecordsPage() {
 
   const { data, isLoading } = useSuperRecordSearch(debouncedQuery, page);
   const { data: mergeSuggestions } = useMergeSuggestions();
-  const { mutate: acceptMerge } = useAcceptMerge();
-  const { mutate: rejectMerge } = useRejectMerge();
 
   const total = data?.total ?? 0;
-  const suggestions = mergeSuggestions ?? [];
+  const pendingMergeCount = mergeSuggestions?.length ?? 0;
   const avgLtv = data?.data && data.data.length > 0
     ? data.data.reduce((sum, r) => sum + r.ltv_zar, 0) / data.data.length
     : 0;
@@ -222,7 +148,7 @@ export default function RecordsPage() {
           },
           {
             label: "Merge Suggestions",
-            value: formatNumber(suggestions.length),
+            value: formatNumber(pendingMergeCount),
             icon: <AlertTriangle className="w-5 h-5" />,
             iconBg: "bg-warning/10",
             iconColor: "text-warning",
@@ -249,29 +175,6 @@ export default function RecordsPage() {
           </div>
         ))}
       </div>
-
-      {/* Merge suggestions */}
-      {suggestions.length > 0 && (
-        <div className="bg-white rounded-xl border border-neutral-200 p-5 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-warning" />
-              <h3 className="text-sm font-semibold text-neutral-900">Merge Suggestions</h3>
-            </div>
-            <span className="text-xs bg-warning/10 text-warning px-2.5 py-1 rounded-full font-medium">
-              {suggestions.length} pending
-            </span>
-          </div>
-          {suggestions.map((s) => (
-            <MergeSuggestionCard
-              key={s.id}
-              suggestion={s}
-              onAccept={() => acceptMerge(s.id)}
-              onReject={() => rejectMerge(s.id)}
-            />
-          ))}
-        </div>
-      )}
 
       {/* Customer list */}
       <div className="flex flex-col gap-3">
@@ -304,6 +207,9 @@ export default function RecordsPage() {
           onPageChange={setPage}
         />
       )}
+
+      {/* Merge suggestions */}
+      <MergeSuggestions />
     </div>
   );
 }
