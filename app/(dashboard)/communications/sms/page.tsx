@@ -142,6 +142,19 @@ export default function NewSmsCampaignPage() {
             <CardContent className="py-5 flex flex-col gap-5">
               <h3 className="text-sm font-semibold text-neutral-900">Campaign Details</h3>
 
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-700">Phone Number Storage Notice</p>
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    VeniCX stores only hashed phone numbers for POPIA compliance. Bulk SMS campaigns
+                    require integration with your partner data source to resolve full MSISDN values
+                    at send time. Individual SMS sends via the Super Record detail page work normally
+                    when a destination number is provided directly.
+                  </p>
+                </div>
+              </div>
+
               <Input
                 label="Campaign Name"
                 placeholder="e.g., February Lead Follow-up"
@@ -258,7 +271,6 @@ export default function NewSmsCampaignPage() {
             <Button variant="black" size="lg" className="w-full" disabled={!name || !message} onClick={() => setShowConfirm(true)}>
               <Send className="w-4 h-4" /> Send Campaign
             </Button>
-            <Button variant="secondary" size="lg" className="w-full">Save as Draft</Button>
             <Link href="/communications" className="text-center text-sm text-neutral-500 hover:text-neutral-700 py-1">
               Cancel
             </Link>

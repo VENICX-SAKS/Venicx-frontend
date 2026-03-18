@@ -69,9 +69,6 @@ export default function EmailTemplatesPage() {
   const [subject, setSubject] = useState(DEFAULT_TEMPLATES[0].subject);
   const [content, setContent] = useState(DEFAULT_TEMPLATES[0].content);
   const [previewTab, setPreviewTab] = useState<"desktop" | "mobile">("desktop");
-  const [trackOpens, setTrackOpens] = useState(true);
-  const [trackClicks, setTrackClicks] = useState(true);
-  const [updateRecord, setUpdateRecord] = useState(true);
   const [saved, setSaved] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [sendError, setSendError] = useState("");
@@ -317,26 +314,13 @@ export default function EmailTemplatesPage() {
           {/* Tracking */}
           <Card>
             <CardContent className="py-5">
-              <h3 className="text-sm font-semibold text-neutral-900 mb-4">Email Tracking</h3>
-              <div className="flex flex-col gap-3">
-                {[
-                  { checked: trackOpens,   set: setTrackOpens,   label: "Track Opens",          desc: "Log when recipients open this email" },
-                  { checked: trackClicks,  set: setTrackClicks,  label: "Track Clicks",         desc: "Log when recipients click links in this email" },
-                  { checked: updateRecord, set: setUpdateRecord, label: "Update Super Record",  desc: "Store engagement data in customer timeline" },
-                ].map(({ checked, set, label, desc }) => (
-                  <label key={label} className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={e => set(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded accent-primary"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-neutral-900">{label}</p>
-                      <p className="text-xs text-neutral-500">{desc}</p>
-                    </div>
-                  </label>
-                ))}
+              <h3 className="text-sm font-semibold text-neutral-900 mb-3">Email Tracking</h3>
+              <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
+                <p className="text-xs text-neutral-500">
+                  Open tracking and click tracking are enabled by default for all emails via SendGrid.
+                  Engagement events are automatically recorded to each customer&apos;s Super Record
+                  timeline via webhook.
+                </p>
               </div>
             </CardContent>
           </Card>
