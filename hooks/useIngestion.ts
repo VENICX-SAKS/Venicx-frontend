@@ -4,7 +4,9 @@ import { api } from "@/lib/api";
 export interface BatchStatus {
   id: string;
   filename: string;
+  file_type?: string;
   status: string;
+  record_type?: "customer" | "business";
   total_rows: number | null;
   processed_rows: number;
   failed_rows: number;
@@ -54,9 +56,15 @@ export function useTemplates() {
 
 export function useUploadFile() {
   return useMutation({
-    mutationFn: (formData: FormData) =>
+    mutationFn: ({
+      formData,
+      recordType,
+    }: {
+      formData: FormData;
+      recordType: "customer" | "business";
+    }) =>
       api.upload<{ batch_id: string; filename: string; file_type: string }>(
-        "/api/v1/ingestion/upload",
+        `/api/v1/ingestion/upload?record_type=${recordType}`,
         formData
       ),
   });

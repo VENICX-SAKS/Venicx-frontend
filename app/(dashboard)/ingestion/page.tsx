@@ -222,9 +222,11 @@ function BatchRow({
 export default function IngestionPage() {
   const [dragOver, setDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [recordType, setRecordType] = useState<"customer" | "business">("customer");
   const [mappingModal, setMappingModal] = useState<{
     batchId: string;
     columns: string[];
+    recordType: "customer" | "business";
   } | null>(null);
   const [pipelineBatchId, setPipelineBatchId] = useState<string | null>(null);
 
@@ -255,12 +257,13 @@ export default function IngestionPage() {
 
       const formData = new FormData();
       formData.append("file", file);
-      const res = await uploadFile(formData);
+      const res = await uploadFile({ formData, recordType });
 
       refetchBatches();
       setMappingModal({
         batchId: res.batch_id,
         columns: columns.length > 0 ? columns : [],
+        recordType,
       });
     } catch (e) {
       setUploadError(e instanceof ApiError ? e.message : "Upload failed. Please try again.");
@@ -292,6 +295,49 @@ export default function IngestionPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Record Type Selector */}
+      <div className="bg-white border border-neutral-200 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-neutral-900 mb-3">Record Type</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setRecordType("customer")}
+            className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-colors text-left ${
+              recordType === "customer"
+                ? "border-primary bg-primary/5"
+                : "border-neutral-200 bg-white hover:border-neutral-300"
+            }`}
+          >
+            <span className="text-2xl">👤</span>
+            <div>
+              <p className={`text-sm font-semibold ${recordType === "customer" ? "text-primary" : "text-neutral-900"}`}>
+                Customer Records
+              </p>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Individual people — personal details, contact info
+              </p>
+            </div>
+          </button>
+          <button
+            onClick={() => setRecordType("business")}
+            className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-colors text-left ${
+              recordType === "business"
+                ? "border-primary bg-primary/5"
+                : "border-neutral-200 bg-white hover:border-neutral-300"
+            }`}
+          >
+            <span className="text-2xl">🏢</span>
+            <div>
+              <p className={`text-sm font-semibold ${recordType === "business" ? "text-primary" : "text-neutral-900"}`}>
+                Business Records
+              </p>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Companies — registration, website, contact details
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
+
       {/* Upload section */}
       <div className="bg-white rounded-xl border border-neutral-200 shadow-card">
         <div className="px-5 py-4 border-b border-neutral-100">
@@ -391,11 +437,19 @@ export default function IngestionPage() {
                 onRetry={async () => {
                   const result = await retryBatch(batch.id);
                   if (result.status === "mapping") {
-                    setMappingModal({ batchId: batch.id, columns: batch.source_columns ?? [] });
+                    setMappingModal({
+                      batchId: batch.id,
+                      columns: batch.source_columns ?? [],
+                      recordType: (batch.record_type as "customer" | "business") ?? "customer",
+                    });
                   }
                 }}
                 onResumeMapping={() => {
-                  setMappingModal({ batchId: batch.id, columns: batch.source_columns ?? [] });
+                  setMappingModal({
+                    batchId: batch.id,
+                    columns: batch.source_columns ?? [],
+                    recordType: (batch.record_type as "customer" | "business") ?? "customer",
+                  });
                 }}
               />
             ))
@@ -414,6 +468,7 @@ export default function IngestionPage() {
           <FieldMapper
             sourceColumns={mappingModal.columns}
             templates={templates ?? []}
+            recordType={mappingModal.recordType}
             onSubmit={handleMapping}
             loading={mapping}
           />

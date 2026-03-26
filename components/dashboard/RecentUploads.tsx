@@ -51,11 +51,16 @@ export function RecentUploads({ batches, isLoading }: RecentUploadsProps) {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium text-neutral-900 truncate">
                       {batch.filename}
                     </span>
                     <StatusBadge status={batch.status} />
+                    {batch.record_type === "business" && (
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                        Business
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-neutral-500 mt-0.5">
                     {batch.partner_name ?? "—"} · {formatNumber(batch.total_rows ?? 0)} records

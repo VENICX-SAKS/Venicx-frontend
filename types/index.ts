@@ -22,6 +22,7 @@ export interface IngestionBatch {
   file_type: string;
   partner_name: string | null;
   status: BatchStatus;
+  record_type?: "customer" | "business";
   total_rows: number | null;
   processed_rows: number;
   failed_rows: number;

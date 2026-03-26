@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import {
-  CANONICAL_FIELDS,
-  IDENTITY_FIELDS,
-  REQUIRED_FIELD_NOTE,
-} from "@/lib/canonical-fields";
+import { CANONICAL_FIELDS, IDENTITY_FIELDS } from "@/lib/canonical-fields";
+import { BUSINESS_CANONICAL_FIELDS } from "@/lib/business-fields";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AlertCircle, CheckCircle } from "lucide-react";
@@ -14,6 +11,7 @@ import type { MappingTemplate } from "@/hooks/useIngestion";
 interface FieldMapperProps {
   sourceColumns: string[];
   templates: MappingTemplate[];
+  recordType: "customer" | "business";
   onSubmit: (
     mapping: Record<string, string>,
     partnerName: string,
@@ -22,7 +20,6 @@ interface FieldMapperProps {
   loading?: boolean;
 }
 
-// Auto-guess canonical field from column name
 const CANONICAL_NAMES = new Set([
   "first_name", "last_name", "date_of_birth", "gender", "msisdn", "email",
   "national_id", "address_line_1", "address_line_2", "city", "province",
@@ -30,26 +27,24 @@ const CANONICAL_NAMES = new Set([
 ]);
 
 const FIELD_ALIASES: Record<string, string[]> = {
-  first_name:    ["first_name", "firstname", "first name", "fname", "given_name"],
-  last_name:     ["last_name", "lastname", "last name", "lname", "surname", "family_name"],
-  msisdn:        ["msisdn", "phone", "mobile", "cell", "cellphone", "phone_number", "phone number", "contact_number", "telephone"],
-  email:         ["email", "email_address", "email address", "e-mail", "emailaddress"],
-  national_id:   ["national_id", "id_number", "id_no", "id number", "identity_number", "sa_id"],
-  date_of_birth: ["date_of_birth", "date of birth", "dob", "birthdate", "birth_date", "birthday"],
-  address_line_1:["address_line_1", "address line 1", "address_line1", "address1", "address", "street", "street_address"],
-  address_line_2:["address_line_2", "address line 2", "address_line2", "address2", "suburb"],
-  city:          ["city", "town"],
-  province:      ["province", "state", "region"],
-  postal_code:   ["postal_code", "postal code", "postcode", "zip", "zip_code"],
-  consent_sms:   ["consent_sms", "sms_consent", "sms consent", "sms_opt_in"],
-  consent_email: ["consent_email", "email_consent", "email consent", "email_opt_in"],
+  first_name:     ["first_name", "firstname", "first name", "fname", "given_name"],
+  last_name:      ["last_name", "lastname", "last name", "lname", "surname", "family_name"],
+  msisdn:         ["msisdn", "phone", "mobile", "cell", "cellphone", "phone_number", "phone number", "contact_number", "telephone"],
+  email:          ["email", "email_address", "email address", "e-mail", "emailaddress"],
+  national_id:    ["national_id", "id_number", "id_no", "id number", "identity_number", "sa_id"],
+  date_of_birth:  ["date_of_birth", "date of birth", "dob", "birthdate", "birth_date", "birthday"],
+  address_line_1: ["address_line_1", "address line 1", "address_line1", "address1", "address", "street", "street_address"],
+  address_line_2: ["address_line_2", "address line 2", "address_line2", "address2", "suburb"],
+  city:           ["city", "town"],
+  province:       ["province", "state", "region"],
+  postal_code:    ["postal_code", "postal code", "postcode", "zip", "zip_code"],
+  consent_sms:    ["consent_sms", "sms_consent", "sms consent", "sms_opt_in"],
+  consent_email:  ["consent_email", "email_consent", "email consent", "email_opt_in"],
 };
 
 function guessMapping(col: string): string {
   const lower = col.toLowerCase().replace(/\s+/g, "_");
-  // Exact canonical name match first
   if (CANONICAL_NAMES.has(lower)) return lower;
-  // Alias matching
   for (const [canonical, aliases] of Object.entries(FIELD_ALIASES)) {
     if (aliases.some((alias) => lower === alias || lower.includes(alias) || alias.includes(lower))) {
       return canonical;
@@ -58,12 +53,9 @@ function guessMapping(col: string): string {
   return "[ignore]";
 }
 
-export function FieldMapper({
-  sourceColumns,
-  templates,
-  onSubmit,
-  loading,
-}: FieldMapperProps) {
+export function FieldMapper({ sourceColumns, templates, recordType, onSubmit, loading }: FieldMapperProps) {
+  const canonicalFields = recordType === "business" ? BUSINESS_CANONICAL_FIELDS : CANONICAL_FIELDS;
+
   const defaultMappings = useMemo(() => {
     const guessed: Record<string, string> = {};
     sourceColumns.forEach((col) => { guessed[col] = guessMapping(col); });
@@ -84,21 +76,36 @@ export function FieldMapper({
     if (template.partner_name) setPartnerName(template.partner_name);
   };
 
-  const hasIdentityMapped = IDENTITY_FIELDS.some((f) =>
-    Object.values(mappings).includes(f)
-  );
+  const hasRequiredField = recordType === "business"
+    ? Object.values(mappings).includes("business_name")
+    : IDENTITY_FIELDS.some((f) => Object.values(mappings).includes(f));
+
+  const requiredFieldLabel = recordType === "business"
+    ? "Business Name must be mapped before proceeding"
+    : "At least one identity field (phone, email, or ID number) must be mapped";
 
   const handleSubmit = () => {
-    if (!hasIdentityMapped) return;
-    onSubmit(
-      mappings,
-      partnerName,
-      saveAsTemplate && templateName ? { name: templateName } : undefined
-    );
+    if (!hasRequiredField) return;
+    onSubmit(mappings, partnerName, saveAsTemplate && templateName ? { name: templateName } : undefined);
   };
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Context label */}
+      <div className="flex items-center gap-2">
+        <span className="text-base">{recordType === "business" ? "🏢" : "👤"}</span>
+        <div>
+          <h3 className="text-sm font-semibold text-neutral-900">
+            Map Fields — {recordType === "business" ? "Business Records" : "Customer Records"}
+          </h3>
+          <p className="text-xs text-neutral-500 mt-0.5">
+            {recordType === "business"
+              ? "Map your columns to business canonical fields. Business Name is required."
+              : "Map your columns to customer canonical fields. At least one identity field is required."}
+          </p>
+        </div>
+      </div>
+
       {/* Template loader */}
       {templates.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
@@ -123,28 +130,24 @@ export function FieldMapper({
         onChange={(e) => setPartnerName(e.target.value)}
       />
 
-      {/* Identity field validation */}
-      {!hasIdentityMapped ? (
+      {/* Required field validation */}
+      {!hasRequiredField ? (
         <div className="flex items-start gap-2 text-sm text-warning bg-warning/5 border border-warning/20 rounded-lg px-4 py-3">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>{REQUIRED_FIELD_NOTE}</span>
+          <span>{requiredFieldLabel}</span>
         </div>
       ) : (
         <div className="flex items-center gap-2 text-sm text-success bg-success/5 border border-success/20 rounded-lg px-4 py-3">
           <CheckCircle className="w-4 h-4 flex-shrink-0" />
-          <span>Identity field mapped — ready to process</span>
+          <span>Required field mapped — ready to process</span>
         </div>
       )}
 
       {/* Mapping table */}
       <div className="border border-neutral-200 rounded-xl overflow-hidden">
         <div className="grid grid-cols-2 bg-neutral-50 px-4 py-2 border-b border-neutral-200">
-          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
-            Source Column
-          </span>
-          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
-            Maps to
-          </span>
+          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Source Column</span>
+          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Maps to</span>
         </div>
         <div className="divide-y divide-neutral-100">
           {sourceColumns.map((col) => (
@@ -152,15 +155,11 @@ export function FieldMapper({
               <span className="text-sm font-mono text-neutral-700 truncate">{col}</span>
               <select
                 value={mappings[col] ?? "[ignore]"}
-                onChange={(e) =>
-                  setMappings((prev) => ({ ...prev, [col]: e.target.value }))
-                }
+                onChange={(e) => setMappings((prev) => ({ ...prev, [col]: e.target.value }))}
                 className="text-sm border border-neutral-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                {CANONICAL_FIELDS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
+                {canonicalFields.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
                 ))}
               </select>
             </div>
@@ -180,22 +179,11 @@ export function FieldMapper({
           <span className="text-sm text-neutral-600">Save this mapping as a template</span>
         </label>
         {saveAsTemplate && (
-          <Input
-            placeholder="Template name"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-          />
+          <Input placeholder="Template name" value={templateName} onChange={(e) => setTemplateName(e.target.value)} />
         )}
       </div>
 
-      <Button
-        variant="primary"
-        size="lg"
-        onClick={handleSubmit}
-        loading={loading}
-        disabled={!hasIdentityMapped}
-        className="self-start"
-      >
+      <Button variant="primary" size="lg" onClick={handleSubmit} loading={loading} disabled={!hasRequiredField} className="self-start">
         Start Processing
       </Button>
     </div>

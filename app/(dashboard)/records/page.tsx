@@ -6,6 +6,7 @@ import { Eye, Users, AlertTriangle, TrendingUp, Search } from "lucide-react";
 import { useSuperRecordSearch } from "@/hooks/useSuperRecords";
 import { useMergeSuggestions } from "@/hooks/useMergeSuggestions";
 import { MergeSuggestions } from "@/components/super-record/MergeSuggestions";
+import { BusinessRecordsTable } from "@/components/super-record/BusinessRecordsTable";
 import { Pagination } from "@/components/super-record/Pagination";
 import { formatNumber, formatCurrency, cn } from "@/lib/utils";
 import type { SearchResult } from "@/hooks/useSuperRecords";
@@ -101,6 +102,7 @@ export default function RecordsPage() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<"customers" | "businesses">("customers");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -121,95 +123,125 @@ export default function RecordsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Page header */}
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-base font-semibold text-neutral-900">Customer Super Records</h2>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search customers..."
-            className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-neutral-400"
-          />
-        </div>
-      </div>
-
-      {/* Stats row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Tab switcher */}
+      <div className="flex gap-1 bg-white border border-neutral-200 rounded-xl p-1 w-fit">
         {[
-          {
-            label: "Total Super Records",
-            value: formatNumber(total),
-            icon: <Users className="w-5 h-5" />,
-            iconBg: "bg-primary/10",
-            iconColor: "text-primary",
-          },
-          {
-            label: "Merge Suggestions",
-            value: formatNumber(pendingMergeCount),
-            icon: <AlertTriangle className="w-5 h-5" />,
-            iconBg: "bg-warning/10",
-            iconColor: "text-warning",
-          },
-          {
-            label: "Avg Lifetime Value",
-            value: formatCurrency(avgLtv),
-            icon: <TrendingUp className="w-5 h-5" />,
-            iconBg: "bg-success/10",
-            iconColor: "text-success",
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-white rounded-xl border border-neutral-200 p-5 flex items-start justify-between"
+          { id: "customers", icon: "👤", label: "Customers" },
+          { id: "businesses", icon: "🏢", label: "Businesses" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id as "customers" | "businesses"); setQuery(""); }}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              activeTab === tab.id
+                ? "bg-primary text-white"
+                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50"
+            }`}
           >
-            <div>
-              <p className="text-xs text-neutral-500">{stat.label}</p>
-              <p className="text-2xl font-bold text-neutral-900 mt-1">{stat.value}</p>
-            </div>
-            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", stat.iconBg)}>
-              <span className={stat.iconColor}>{stat.icon}</span>
-            </div>
-          </div>
+            <span>{tab.icon}</span>
+            {tab.label}
+          </button>
         ))}
       </div>
 
-      {/* Customer list */}
-      <div className="flex flex-col gap-3">
-        {isLoading &&
-          Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-white rounded-xl border border-neutral-200 h-24 animate-pulse"
-            />
-          ))}
-
-        {!isLoading && data?.data.length === 0 && (
-          <div className="bg-white rounded-xl border border-neutral-200 px-6 py-16 text-center">
-            <p className="text-sm text-neutral-400">No records found</p>
+      {activeTab === "customers" && (
+        <>
+          {/* Page header */}
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-base font-semibold text-neutral-900">Customer Super Records</h2>
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search customers..."
+                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-neutral-400"
+              />
+            </div>
           </div>
-        )}
 
-        {!isLoading &&
-          data?.data.map((record) => (
-            <CustomerCard key={record.id} record={record} />
-          ))}
-      </div>
+          {/* Stats row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              {
+                label: "Total Super Records",
+                value: formatNumber(total),
+                icon: <Users className="w-5 h-5" />,
+                iconBg: "bg-primary/10",
+                iconColor: "text-primary",
+              },
+              {
+                label: "Merge Suggestions",
+                value: formatNumber(pendingMergeCount),
+                icon: <AlertTriangle className="w-5 h-5" />,
+                iconBg: "bg-warning/10",
+                iconColor: "text-warning",
+              },
+              {
+                label: "Avg Lifetime Value",
+                value: formatCurrency(avgLtv),
+                icon: <TrendingUp className="w-5 h-5" />,
+                iconBg: "bg-success/10",
+                iconColor: "text-success",
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-white rounded-xl border border-neutral-200 p-5 flex items-start justify-between"
+              >
+                <div>
+                  <p className="text-xs text-neutral-500">{stat.label}</p>
+                  <p className="text-2xl font-bold text-neutral-900 mt-1">{stat.value}</p>
+                </div>
+                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", stat.iconBg)}>
+                  <span className={stat.iconColor}>{stat.icon}</span>
+                </div>
+              </div>
+            ))}
+          </div>
 
-      {/* Pagination */}
-      {data && (
-        <Pagination
-          page={data.page}
-          limit={data.limit}
-          total={data.total}
-          onPageChange={setPage}
-        />
+          {/* Customer list */}
+          <div className="flex flex-col gap-3">
+            {isLoading &&
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-xl border border-neutral-200 h-24 animate-pulse" />
+              ))}
+            {!isLoading && data?.data.length === 0 && (
+              <div className="bg-white rounded-xl border border-neutral-200 px-6 py-16 text-center">
+                <p className="text-sm text-neutral-400">No records found</p>
+              </div>
+            )}
+            {!isLoading && data?.data.map((record) => (
+              <CustomerCard key={record.id} record={record} />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {data && (
+            <Pagination page={data.page} limit={data.limit} total={data.total} onPageChange={setPage} />
+          )}
+
+          {/* Merge suggestions */}
+          <MergeSuggestions />
+        </>
       )}
 
-      {/* Merge suggestions */}
-      <MergeSuggestions />
+      {activeTab === "businesses" && (
+        <div className="flex flex-col gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search businesses..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <BusinessRecordsTable query={query} />
+        </div>
+      )}
     </div>
   );
 }
