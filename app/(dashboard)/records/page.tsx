@@ -7,6 +7,7 @@ import { useSuperRecordSearch } from "@/hooks/useSuperRecords";
 import { useMergeSuggestions } from "@/hooks/useMergeSuggestions";
 import { MergeSuggestions } from "@/components/super-record/MergeSuggestions";
 import { BusinessRecordsTable } from "@/components/super-record/BusinessRecordsTable";
+import { BranchesTable } from "@/components/super-record/BranchesTable";
 import { Pagination } from "@/components/super-record/Pagination";
 import { formatNumber, formatCurrency, cn } from "@/lib/utils";
 import type { SearchResult } from "@/hooks/useSuperRecords";
@@ -102,7 +103,7 @@ export default function RecordsPage() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [activeTab, setActiveTab] = useState<"customers" | "businesses">("customers");
+  const [activeTab, setActiveTab] = useState<"customers" | "businesses" | "branches">("customers");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -126,12 +127,13 @@ export default function RecordsPage() {
       {/* Tab switcher */}
       <div className="flex gap-1 bg-white border border-neutral-200 rounded-xl p-1 w-fit">
         {[
-          { id: "customers", icon: "👤", label: "Customers" },
+          { id: "customers",  icon: "👤", label: "Customers"  },
           { id: "businesses", icon: "🏢", label: "Businesses" },
+          { id: "branches",   icon: "📍", label: "Branches"   },
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id as "customers" | "businesses"); setQuery(""); }}
+            onClick={() => { setActiveTab(tab.id as any); setQuery(""); }}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               activeTab === tab.id
                 ? "bg-primary text-white"
@@ -240,6 +242,22 @@ export default function RecordsPage() {
             />
           </div>
           <BusinessRecordsTable query={query} />
+        </div>
+      )}
+
+      {activeTab === "branches" && (
+        <div className="flex flex-col gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search branches by name, city, or business..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <BranchesTable query={query} />
         </div>
       )}
     </div>

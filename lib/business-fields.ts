@@ -18,3 +18,18 @@ export const BUSINESS_CANONICAL_FIELDS = [
   { value: "contact_msisdn", label: "Contact Phone" },
   { value: "contact_email", label: "Contact Email" },
 ];
+
+export const BRANCH_CANONICAL_FIELDS = [
+  { value: "[ignore]", label: "— Ignore this column —" },
+  { value: "business_name", label: "Parent Business Name" },
+  { value: "branch_name", label: "Branch Name *" },
+  { value: "physical_address", label: "Physical Address" },
+  { value: "city", label: "City" },
+  { value: "province", label: "Province" },
+  { value: "postal_code", label: "Postal Code" },
+  { value: "branch_phone", label: "Branch Phone" },
+  { value: "branch_email", label: "Branch Email" },
+  { value: "branch_manager_name", label: "Branch Manager Name" },
+  { value: "operating_hours", label: "Operating Hours" },
+  { value: "is_headquarters", label: "Is Headquarters (yes/no)" },
+];

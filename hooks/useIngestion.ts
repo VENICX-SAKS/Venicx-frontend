@@ -6,7 +6,7 @@ export interface BatchStatus {
   filename: string;
   file_type?: string;
   status: string;
-  record_type?: "customer" | "business";
+  record_type?: "customer" | "business" | "branch";
   total_rows: number | null;
   processed_rows: number;
   failed_rows: number;
@@ -61,7 +61,7 @@ export function useUploadFile() {
       recordType,
     }: {
       formData: FormData;
-      recordType: "customer" | "business";
+      recordType: "customer" | "business" | "branch";
     }) =>
       api.upload<{ batch_id: string; filename: string; file_type: string }>(
         `/api/v1/ingestion/upload?record_type=${recordType}`,

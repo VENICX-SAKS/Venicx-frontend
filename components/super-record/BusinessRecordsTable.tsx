@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Building2, Globe, Mail, MapPin, Hash } from "lucide-react";
@@ -81,7 +82,8 @@ export function BusinessRecordsTable({ query }: { query: string }) {
 
       <div className="divide-y divide-neutral-100">
         {businesses.map((b) => (
-          <div key={b.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 py-4 items-center hover:bg-neutral-50 transition-colors">
+          <Link key={b.id} href={`/records/business/${b.id}`} className="block">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 py-4 items-center hover:bg-neutral-50 transition-colors cursor-pointer">
             {/* Business name + reg number */}
             <div className="md:col-span-4 flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -150,6 +152,7 @@ export function BusinessRecordsTable({ query }: { query: string }) {
               <p className="text-xs text-neutral-400">{formatDate(b.created_at)}</p>
             </div>
           </div>
+          </Link>
         ))}
       </div>
     </div>

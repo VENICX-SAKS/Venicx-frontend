@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { CANONICAL_FIELDS, IDENTITY_FIELDS } from "@/lib/canonical-fields";
-import { BUSINESS_CANONICAL_FIELDS } from "@/lib/business-fields";
+import { BUSINESS_CANONICAL_FIELDS, BRANCH_CANONICAL_FIELDS } from "@/lib/business-fields";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AlertCircle, CheckCircle } from "lucide-react";
@@ -11,7 +11,7 @@ import type { MappingTemplate } from "@/hooks/useIngestion";
 interface FieldMapperProps {
   sourceColumns: string[];
   templates: MappingTemplate[];
-  recordType: "customer" | "business";
+  recordType: "customer" | "business" | "branch";
   onSubmit: (
     mapping: Record<string, string>,
     partnerName: string,
@@ -54,7 +54,10 @@ function guessMapping(col: string): string {
 }
 
 export function FieldMapper({ sourceColumns, templates, recordType, onSubmit, loading }: FieldMapperProps) {
-  const canonicalFields = recordType === "business" ? BUSINESS_CANONICAL_FIELDS : CANONICAL_FIELDS;
+  const canonicalFields =
+    recordType === "business" ? BUSINESS_CANONICAL_FIELDS
+    : recordType === "branch"  ? BRANCH_CANONICAL_FIELDS
+    : CANONICAL_FIELDS;
 
   const defaultMappings = useMemo(() => {
     const guessed: Record<string, string> = {};
@@ -76,13 +79,31 @@ export function FieldMapper({ sourceColumns, templates, recordType, onSubmit, lo
     if (template.partner_name) setPartnerName(template.partner_name);
   };
 
-  const hasRequiredField = recordType === "business"
-    ? Object.values(mappings).includes("business_name")
+  const hasRequiredField =
+    recordType === "business" ? Object.values(mappings).includes("business_name")
+    : recordType === "branch"  ? (
+        Object.values(mappings).includes("branch_name") ||
+        Object.values(mappings).includes("business_name")
+      )
     : IDENTITY_FIELDS.some((f) => Object.values(mappings).includes(f));
 
-  const requiredFieldLabel = recordType === "business"
-    ? "Business Name must be mapped before proceeding"
+  const requiredFieldLabel =
+    recordType === "business" ? "Business Name must be mapped before proceeding"
+    : recordType === "branch"  ? "Branch Name or Business Name must be mapped"
     : "At least one identity field (phone, email, or ID number) must be mapped";
+
+  const mapperIcon =
+    recordType === "business" ? "🏢" : recordType === "branch" ? "📍" : "👤";
+
+  const mapperTitle =
+    recordType === "business" ? "Map Fields — Business Records"
+    : recordType === "branch"  ? "Map Fields — Branch / Location Records"
+    : "Map Fields — Customer Records";
+
+  const mapperDesc =
+    recordType === "business" ? "Map your columns to business canonical fields. Business Name is required."
+    : recordType === "branch"  ? "Map your columns to branch fields. Link to a parent business using Business Name."
+    : "Map your columns to customer canonical fields. At least one identity field is required.";
 
   const handleSubmit = () => {
     if (!hasRequiredField) return;
@@ -93,16 +114,10 @@ export function FieldMapper({ sourceColumns, templates, recordType, onSubmit, lo
     <div className="flex flex-col gap-5">
       {/* Context label */}
       <div className="flex items-center gap-2">
-        <span className="text-base">{recordType === "business" ? "🏢" : "👤"}</span>
+        <span className="text-base">{mapperIcon}</span>
         <div>
-          <h3 className="text-sm font-semibold text-neutral-900">
-            Map Fields — {recordType === "business" ? "Business Records" : "Customer Records"}
-          </h3>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            {recordType === "business"
-              ? "Map your columns to business canonical fields. Business Name is required."
-              : "Map your columns to customer canonical fields. At least one identity field is required."}
-          </p>
+          <h3 className="text-sm font-semibold text-neutral-900">{mapperTitle}</h3>
+          <p className="text-xs text-neutral-500 mt-0.5">{mapperDesc}</p>
         </div>
       </div>
 
