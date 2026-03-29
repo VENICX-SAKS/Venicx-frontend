@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { MapPin, Phone, Mail, Clock, Star } from "lucide-react";
+import { Pagination } from "@/components/super-record/Pagination";
 
 interface BranchRow {
   id: string;
@@ -22,11 +24,16 @@ interface BranchRow {
 }
 
 export function BranchesTable({ query }: { query: string }) {
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
+  useEffect(() => { setPage(1); }, [query]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["branches", query],
+    queryKey: ["branches", query, page],
     queryFn: () =>
       api.get<{ data: BranchRow[]; total: number }>(
-        `/api/v1/super-record/branches?q=${encodeURIComponent(query)}&page=1&limit=50`
+        `/api/v1/super-record/branches?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`
       ),
     placeholderData: (prev) => prev,
   });
@@ -70,6 +77,7 @@ export function BranchesTable({ query }: { query: string }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
       {Object.entries(grouped).map(([businessName, branchList]) => (
         <div key={businessName} className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
           {/* Business group header */}
@@ -146,6 +154,13 @@ export function BranchesTable({ query }: { query: string }) {
           </div>
         </div>
       ))}
+      </div>
+      <Pagination
+        page={page}
+        limit={limit}
+        total={data?.total ?? 0}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Building2, Globe, Mail, MapPin, Hash } from "lucide-react";
 import { CompletenessBar } from "@/components/ui/CompletenessBar";
+import { Pagination } from "@/components/super-record/Pagination";
 import { formatDate } from "@/lib/utils";
 
 interface BusinessRow {
@@ -28,11 +30,16 @@ interface BusinessResponse {
 }
 
 export function BusinessRecordsTable({ query }: { query: string }) {
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
+  useEffect(() => { setPage(1); }, [query]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ["businesses", query],
+    queryKey: ["businesses", query, page],
     queryFn: () =>
       api.get<BusinessResponse>(
-        `/api/v1/super-record/businesses?q=${encodeURIComponent(query)}&page=1&limit=20`
+        `/api/v1/super-record/businesses?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`
       ),
     placeholderData: (prev) => prev,
   });
@@ -72,7 +79,8 @@ export function BusinessRecordsTable({ query }: { query: string }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+    <div className="flex flex-col gap-3">
+      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
       {/* Table header */}
       <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-neutral-50 border-b border-neutral-200">
         <span className="col-span-4 text-xs font-medium text-neutral-500 uppercase tracking-wide">Business</span>
@@ -167,6 +175,13 @@ export function BusinessRecordsTable({ query }: { query: string }) {
           </Link>
         ))}
       </div>
+      </div>
+      <Pagination
+        page={page}
+        limit={limit}
+        total={data?.total ?? 0}
+        onPageChange={setPage}
+      />
     </div>
   );
 }
