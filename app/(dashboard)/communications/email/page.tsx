@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Send, Eye, Users, DollarSign, AlertCircle } from "lucide-react";
+import { ArrowLeft, Mail, Send, Eye, Users, AlertCircle, Search, X, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, cn } from "@/lib/utils";
 
 const DEFAULT_TEMPLATES = [
   {
@@ -50,6 +50,7 @@ const AUDIENCE_OPTIONS = [
   { value: "businesses_by_industry", label: "Businesses by industry" },
   { value: "all_branches",           label: "All branches" },
   { value: "both",                   label: "Customers + businesses + branches" },
+  { value: "selected_recipients",    label: "Select specific recipients" },
 ];
 
 const BUSINESS_RECIPIENT_OPTIONS = [
@@ -86,6 +87,140 @@ function renderWithSample(text: string) {
 const needsBusinessRecipientType = (audience: string) =>
   ["all_businesses", "businesses_by_industry", "both"].includes(audience);
 
+// ── Recipient picker ──────────────────────────────────────────────────────────
+
+interface SelectedRecipient {
+  id: string;
+  type: "customer" | "business";
+  name: string;
+  contact: string;
+}
+
+function RecipientPicker({
+  selected,
+  onChange,
+}: {
+  selected: SelectedRecipient[];
+  onChange: (r: SelectedRecipient[]) => void;
+}) {
+  const [tab, setTab] = useState<"customers" | "businesses">("customers");
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data: customerData } = useQuery({
+    queryKey: ["email-picker-customers", debounced],
+    queryFn: () =>
+      api.get<{ data: Array<{ id: string; first_name: string | null; last_name: string | null; email_domain: string | null; city: string | null }> }>(
+        `/api/v1/super-record/search?q=${encodeURIComponent(debounced)}&limit=30`
+      ),
+    enabled: tab === "customers",
+  });
+
+  const { data: businessData } = useQuery({
+    queryKey: ["email-picker-businesses", debounced],
+    queryFn: () =>
+      api.get<{ data: Array<{ id: string; business_name: string | null; business_email: string | null; city: string | null }> }>(
+        `/api/v1/super-record/businesses?q=${encodeURIComponent(debounced)}&limit=30`
+      ),
+    enabled: tab === "businesses",
+  });
+
+  const toggle = (r: SelectedRecipient) => {
+    const exists = selected.find(s => s.id === r.id);
+    onChange(exists ? selected.filter(s => s.id !== r.id) : [...selected, r]);
+  };
+
+  const isSelected = (id: string) => selected.some(s => s.id === id);
+
+  return (
+    <div className="border border-neutral-200 rounded-xl overflow-hidden">
+      <div className="flex border-b border-neutral-200">
+        {(["customers", "businesses"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => { setTab(t); setSearch(""); }}
+            className={cn(
+              "flex-1 py-2.5 text-sm font-medium transition-colors capitalize",
+              tab === t ? "bg-primary/5 text-primary border-b-2 border-primary" : "text-neutral-500 hover:text-neutral-700"
+            )}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div className="px-3 py-2 border-b border-neutral-100 flex items-center gap-2">
+        <Search className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={`Search ${tab}...`}
+          className="flex-1 text-sm outline-none bg-transparent placeholder:text-neutral-400"
+        />
+        {search && <button onClick={() => setSearch("")}><X className="w-3.5 h-3.5 text-neutral-400" /></button>}
+      </div>
+
+      {selected.length > 0 && (
+        <div className="px-3 py-2 bg-primary/5 border-b border-neutral-100 flex items-center justify-between">
+          <span className="text-xs text-primary font-medium flex items-center gap-1.5">
+            <CheckCircle className="w-3.5 h-3.5" />{selected.length} selected
+          </span>
+          <button onClick={() => onChange([])} className="text-xs text-neutral-500 hover:text-error">Clear all</button>
+        </div>
+      )}
+
+      <div className="max-h-64 overflow-y-auto divide-y divide-neutral-50">
+        {tab === "customers" && (customerData?.data ?? []).map(c => {
+          const name = [c.first_name, c.last_name].filter(Boolean).join(" ") || "Unknown";
+          const sel = isSelected(c.id);
+          return (
+            <button key={c.id} onClick={() => toggle({ id: c.id, type: "customer", name, contact: c.email_domain ? `@${c.email_domain}` : "No email" })}
+              className={cn("w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-neutral-50 transition-colors", sel && "bg-primary/5")}>
+              <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0", sel ? "bg-primary border-primary" : "border-neutral-300")}>
+                {sel && <CheckCircle className="w-3 h-3 text-white" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-neutral-900 truncate">{name}</p>
+                <p className="text-xs text-neutral-500">{c.city ?? "—"} · {c.email_domain ? `@${c.email_domain}` : "No email"}</p>
+              </div>
+            </button>
+          );
+        })}
+
+        {tab === "businesses" && (businessData?.data ?? []).map(b => {
+          const name = b.business_name ?? "Unknown";
+          const sel = isSelected(b.id);
+          return (
+            <button key={b.id} onClick={() => toggle({ id: b.id, type: "business", name, contact: b.business_email ?? "No email" })}
+              className={cn("w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-neutral-50 transition-colors", sel && "bg-primary/5")}>
+              <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0", sel ? "bg-primary border-primary" : "border-neutral-300")}>
+                {sel && <CheckCircle className="w-3 h-3 text-white" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-neutral-900 truncate">{name}</p>
+                <p className="text-xs text-neutral-500">{b.city ?? "—"} · {b.business_email ?? "No email"}</p>
+              </div>
+            </button>
+          );
+        })}
+
+        {((tab === "customers" && (customerData?.data ?? []).length === 0) ||
+          (tab === "businesses" && (businessData?.data ?? []).length === 0)) && (
+          <div className="px-4 py-8 text-center text-sm text-neutral-400">
+            {debounced ? `No ${tab} found` : `Type to search ${tab}`}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface PreviewResult {
   estimated_recipients: number;
   customer_count: number;
@@ -110,6 +245,7 @@ export default function EmailCampaignPage() {
   const [provinceFilter, setProvinceFilter] = useState("");
   const [industryFilter, setIndustryFilter] = useState("");
   const [businessRecipientType, setBusinessRecipientType] = useState("business");
+  const [selectedRecipients, setSelectedRecipients] = useState<SelectedRecipient[]>([]);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -122,7 +258,10 @@ export default function EmailCampaignPage() {
   const buildPayload = () => ({
     name: selected.name,
     channel: "email",
-    audience_type: audience,
+    audience_type: audience === "selected_recipients"
+      ? (selectedRecipients.some(r => r.type === "customer") && selectedRecipients.some(r => r.type === "business") ? "both"
+        : selectedRecipients.some(r => r.type === "business") ? "all_businesses" : "all_customers")
+      : audience,
     audience_filter:
       audience === "customers_by_province" ? { province: provinceFilter } :
       audience === "businesses_by_industry" ? { industry: industryFilter } :
@@ -130,6 +269,12 @@ export default function EmailCampaignPage() {
     business_recipient_type: needsBusinessRecipientType(audience) ? businessRecipientType : null,
     message_content: content.replace(/\n/g, "<br>"),
     email_subject: subject,
+    selected_customer_ids: audience === "selected_recipients"
+      ? selectedRecipients.filter(r => r.type === "customer").map(r => r.id)
+      : undefined,
+    selected_business_ids: audience === "selected_recipients"
+      ? selectedRecipients.filter(r => r.type === "business").map(r => r.id)
+      : undefined,
   });
 
   const { mutateAsync: sendCampaign, isPending: sending } = useMutation({
@@ -143,6 +288,16 @@ export default function EmailCampaignPage() {
   });
 
   const handlePreview = async () => {
+    if (audience === "selected_recipients") {
+      setPreview({
+        estimated_recipients: selectedRecipients.length,
+        customer_count: selectedRecipients.filter(r => r.type === "customer").length,
+        business_count: selectedRecipients.filter(r => r.type === "business").length,
+        branch_count: 0,
+        estimated_cost: 0,
+      });
+      return;
+    }
     setPreviewing(true);
     setSendError("");
     try {
@@ -345,7 +500,7 @@ export default function EmailCampaignPage() {
                   <label className="text-sm font-medium text-neutral-700">Target Audience</label>
                   <select
                     value={audience}
-                    onChange={e => { setAudience(e.target.value); setPreview(null); }}
+                    onChange={e => { setAudience(e.target.value); setPreview(null); setSelectedRecipients([]); }}
                     className="border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     {AUDIENCE_OPTIONS.map(o => (
@@ -390,6 +545,18 @@ export default function EmailCampaignPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {audience === "selected_recipients" && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium text-neutral-700">
+                      Select Recipients
+                      {selectedRecipients.length > 0 && (
+                        <span className="ml-2 text-xs text-primary font-normal">{selectedRecipients.length} selected</span>
+                      )}
+                    </label>
+                    <RecipientPicker selected={selectedRecipients} onChange={setSelectedRecipients} />
                   </div>
                 )}
               </div>

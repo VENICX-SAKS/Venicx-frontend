@@ -1,16 +1,19 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send, Users, MessageSquare, DollarSign, Eye } from "lucide-react";
+import {
+  ArrowLeft, Send, Users, MessageSquare, DollarSign, Eye,
+  Search, X, CheckCircle,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { formatNumber, formatCurrency } from "@/lib/utils";
-import { useMutation } from "@tanstack/react-query";
+import { formatNumber, formatCurrency, cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 
-const SMS_RATE = 0.5;
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const AUDIENCE_OPTIONS = [
   { value: "customers_with_consent", label: "Customers with SMS consent" },
@@ -20,6 +23,7 @@ const AUDIENCE_OPTIONS = [
   { value: "businesses_by_industry", label: "Businesses by industry" },
   { value: "all_branches",           label: "All branches" },
   { value: "both",                   label: "Customers + businesses + branches" },
+  { value: "selected_recipients",    label: "Select specific recipients" },
 ];
 
 const BUSINESS_RECIPIENT_OPTIONS = [
@@ -38,20 +42,19 @@ const VARIABLES = [
 
 const SAMPLE = {
   first_name: "John", last_name: "Doe",
-  customer_id: "VCX-001", province: "Gauteng",
-  display_name: "John Doe",
+  customer_id: "VCX-001", province: "Gauteng", display_name: "John Doe",
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getSmsSegments(text: string) {
   if (!text) return 0;
-  if (text.length <= 160) return 1;
-  return Math.ceil(text.length / 153);
+  return text.length <= 160 ? 1 : Math.ceil(text.length / 153);
 }
 
 function getCharsRemaining(text: string) {
   const segs = getSmsSegments(text);
-  if (segs <= 1) return 160 - text.length;
-  return segs * 153 - text.length;
+  return segs <= 1 ? 160 - text.length : segs * 153 - text.length;
 }
 
 function renderPreview(message: string) {
@@ -63,8 +66,165 @@ function renderPreview(message: string) {
     .replace(/{{display_name}}/g, SAMPLE.display_name);
 }
 
-const needsBusinessRecipientType = (audience: string) =>
-  ["all_businesses", "businesses_by_industry", "both"].includes(audience);
+const needsBusinessRecipientType = (a: string) =>
+  ["all_businesses", "businesses_by_industry", "both"].includes(a);
+
+// ── Recipient picker types ────────────────────────────────────────────────────
+
+interface SelectedRecipient {
+  id: string;
+  type: "customer" | "business";
+  name: string;
+  contact: string; // msisdn_last4 or business_phone snippet
+}
+
+// ── Recipient Picker component ────────────────────────────────────────────────
+
+function RecipientPicker({
+  selected,
+  onChange,
+}: {
+  selected: SelectedRecipient[];
+  onChange: (r: SelectedRecipient[]) => void;
+}) {
+  const [tab, setTab] = useState<"customers" | "businesses">("customers");
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data: customerData } = useQuery({
+    queryKey: ["picker-customers", debounced],
+    queryFn: () =>
+      api.get<{ data: Array<{ id: string; first_name: string | null; last_name: string | null; msisdn_last4: string | null; city: string | null }> }>(
+        `/api/v1/super-record/search?q=${encodeURIComponent(debounced)}&limit=30`
+      ),
+    enabled: tab === "customers",
+  });
+
+  const { data: businessData } = useQuery({
+    queryKey: ["picker-businesses", debounced],
+    queryFn: () =>
+      api.get<{ data: Array<{ id: string; business_name: string | null; business_phone: string | null; city: string | null }> }>(
+        `/api/v1/super-record/businesses?q=${encodeURIComponent(debounced)}&limit=30`
+      ),
+    enabled: tab === "businesses",
+  });
+
+  const toggle = (r: SelectedRecipient) => {
+    const exists = selected.find(s => s.id === r.id);
+    onChange(exists ? selected.filter(s => s.id !== r.id) : [...selected, r]);
+  };
+
+  const isSelected = (id: string) => selected.some(s => s.id === id);
+
+  return (
+    <div className="border border-neutral-200 rounded-xl overflow-hidden">
+      {/* Tab bar */}
+      <div className="flex border-b border-neutral-200">
+        {(["customers", "businesses"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => { setTab(t); setSearch(""); }}
+            className={cn(
+              "flex-1 py-2.5 text-sm font-medium transition-colors capitalize",
+              tab === t
+                ? "bg-primary/5 text-primary border-b-2 border-primary"
+                : "text-neutral-500 hover:text-neutral-700"
+            )}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="px-3 py-2 border-b border-neutral-100 flex items-center gap-2">
+        <Search className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={`Search ${tab}...`}
+          className="flex-1 text-sm outline-none bg-transparent placeholder:text-neutral-400"
+        />
+        {search && (
+          <button onClick={() => setSearch("")}>
+            <X className="w-3.5 h-3.5 text-neutral-400" />
+          </button>
+        )}
+      </div>
+
+      {/* Selected count */}
+      {selected.length > 0 && (
+        <div className="px-3 py-2 bg-primary/5 border-b border-neutral-100 flex items-center justify-between">
+          <span className="text-xs text-primary font-medium flex items-center gap-1.5">
+            <CheckCircle className="w-3.5 h-3.5" />
+            {selected.length} selected
+          </span>
+          <button onClick={() => onChange([])} className="text-xs text-neutral-500 hover:text-error">
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {/* Results */}
+      <div className="max-h-64 overflow-y-auto divide-y divide-neutral-50">
+        {tab === "customers" && (customerData?.data ?? []).map(c => {
+          const name = [c.first_name, c.last_name].filter(Boolean).join(" ") || "Unknown";
+          const sel = isSelected(c.id);
+          return (
+            <button
+              key={c.id}
+              onClick={() => toggle({ id: c.id, type: "customer", name, contact: c.msisdn_last4 ? `···${c.msisdn_last4}` : "No number" })}
+              className={cn("w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-neutral-50 transition-colors", sel && "bg-primary/5")}
+            >
+              <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors", sel ? "bg-primary border-primary" : "border-neutral-300")}>
+                {sel && <CheckCircle className="w-3 h-3 text-white" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-neutral-900 truncate">{name}</p>
+                <p className="text-xs text-neutral-500">{c.city ?? "—"} · {c.msisdn_last4 ? `···${c.msisdn_last4}` : "No number"}</p>
+              </div>
+            </button>
+          );
+        })}
+
+        {tab === "businesses" && (businessData?.data ?? []).map(b => {
+          const name = b.business_name ?? "Unknown";
+          const sel = isSelected(b.id);
+          return (
+            <button
+              key={b.id}
+              onClick={() => toggle({ id: b.id, type: "business", name, contact: b.business_phone ?? "No phone" })}
+              className={cn("w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-neutral-50 transition-colors", sel && "bg-primary/5")}
+            >
+              <div className={cn("w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors", sel ? "bg-primary border-primary" : "border-neutral-300")}>
+                {sel && <CheckCircle className="w-3 h-3 text-white" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-neutral-900 truncate">{name}</p>
+                <p className="text-xs text-neutral-500">{b.city ?? "—"} · {b.business_phone ?? "No phone"}</p>
+              </div>
+            </button>
+          );
+        })}
+
+        {((tab === "customers" && (customerData?.data ?? []).length === 0) ||
+          (tab === "businesses" && (businessData?.data ?? []).length === 0)) && (
+          <div className="px-4 py-8 text-center text-sm text-neutral-400">
+            {debounced ? `No ${tab} found` : `Type to search ${tab}`}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface PreviewResult {
   estimated_recipients: number;
@@ -81,12 +241,15 @@ interface CampaignQueued {
   message: string;
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function NewSmsCampaignPage() {
   const [name, setName] = useState("");
   const [audience, setAudience] = useState("customers_with_consent");
   const [provinceFilter, setProvinceFilter] = useState("");
   const [industryFilter, setIndustryFilter] = useState("");
   const [businessRecipientType, setBusinessRecipientType] = useState("business");
+  const [selectedRecipients, setSelectedRecipients] = useState<SelectedRecipient[]>([]);
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -99,17 +262,34 @@ export default function NewSmsCampaignPage() {
   const charsRemaining = getCharsRemaining(message);
   const msgPreview = renderPreview(message);
 
-  const buildPayload = () => ({
-    name,
-    channel: "sms",
-    audience_type: audience,
-    audience_filter:
-      audience === "customers_by_province" ? { province: provinceFilter } :
-      audience === "businesses_by_industry" ? { industry: industryFilter } :
-      null,
-    business_recipient_type: needsBusinessRecipientType(audience) ? businessRecipientType : null,
-    message_content: message,
-  });
+  const buildPayload = () => {
+    if (audience === "selected_recipients") {
+      const customerIds = selectedRecipients.filter(r => r.type === "customer").map(r => r.id);
+      const businessIds = selectedRecipients.filter(r => r.type === "business").map(r => r.id);
+      return {
+        name,
+        channel: "sms",
+        audience_type: customerIds.length > 0 && businessIds.length > 0 ? "both" :
+                       businessIds.length > 0 ? "all_businesses" : "all_customers",
+        audience_filter: null,
+        business_recipient_type: businessIds.length > 0 ? "business" : null,
+        message_content: message,
+        selected_customer_ids: customerIds.length > 0 ? customerIds : undefined,
+        selected_business_ids: businessIds.length > 0 ? businessIds : undefined,
+      };
+    }
+    return {
+      name,
+      channel: "sms",
+      audience_type: audience,
+      audience_filter:
+        audience === "customers_by_province" ? { province: provinceFilter } :
+        audience === "businesses_by_industry" ? { industry: industryFilter } :
+        null,
+      business_recipient_type: needsBusinessRecipientType(audience) ? businessRecipientType : null,
+      message_content: message,
+    };
+  };
 
   const { mutateAsync: sendCampaign, isPending: sending } = useMutation({
     mutationFn: (body: ReturnType<typeof buildPayload>) =>
@@ -130,13 +310,20 @@ export default function NewSmsCampaignPage() {
   }, [message]);
 
   const handlePreview = async () => {
+    if (audience === "selected_recipients") {
+      setPreview({
+        estimated_recipients: selectedRecipients.length,
+        customer_count: selectedRecipients.filter(r => r.type === "customer").length,
+        business_count: selectedRecipients.filter(r => r.type === "business").length,
+        branch_count: 0,
+        estimated_cost: selectedRecipients.length * segments * 0.5,
+      });
+      return;
+    }
     setPreviewing(true);
     setSendError("");
     try {
-      const result = await api.post<PreviewResult>(
-        "/api/v1/communication/campaigns/preview",
-        buildPayload()
-      );
+      const result = await api.post<PreviewResult>("/api/v1/communication/campaigns/preview", buildPayload());
       setPreview(result);
     } catch (e) {
       setSendError(e instanceof ApiError ? e.message : "Preview failed");
@@ -157,6 +344,8 @@ export default function NewSmsCampaignPage() {
     }
   };
 
+  const canSend = name && message && (audience !== "selected_recipients" || selectedRecipients.length > 0);
+
   if (queued) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
@@ -176,7 +365,6 @@ export default function NewSmsCampaignPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/communications">
           <button className="w-8 h-8 rounded-lg border border-neutral-200 flex items-center justify-center hover:bg-neutral-50">
@@ -208,7 +396,7 @@ export default function NewSmsCampaignPage() {
                 <label className="text-sm font-medium text-neutral-700">Target Audience</label>
                 <select
                   value={audience}
-                  onChange={e => { setAudience(e.target.value); setPreview(null); }}
+                  onChange={e => { setAudience(e.target.value); setPreview(null); setSelectedRecipients([]); }}
                   className="border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {AUDIENCE_OPTIONS.map(o => (
@@ -246,16 +434,32 @@ export default function NewSmsCampaignPage() {
                       <button
                         key={o.value}
                         onClick={() => { setBusinessRecipientType(o.value); setPreview(null); }}
-                        className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                        className={cn(
+                          "py-2 px-3 rounded-lg border text-sm font-medium transition-colors",
                           businessRecipientType === o.value
                             ? "border-primary bg-primary/5 text-primary"
                             : "border-neutral-200 text-neutral-600 hover:border-neutral-300"
-                        }`}
+                        )}
                       >
                         {o.label}
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Manual recipient picker */}
+              {audience === "selected_recipients" && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-neutral-700">
+                    Select Recipients
+                    {selectedRecipients.length > 0 && (
+                      <span className="ml-2 text-xs text-primary font-normal">
+                        {selectedRecipients.length} selected
+                      </span>
+                    )}
+                  </label>
+                  <RecipientPicker selected={selectedRecipients} onChange={setSelectedRecipients} />
                 </div>
               )}
 
@@ -327,9 +531,7 @@ export default function NewSmsCampaignPage() {
                     </div>
                     <div>
                       <p className="text-xs text-neutral-500">Recipients</p>
-                      <p className="text-xl font-bold text-neutral-900">
-                        {formatNumber(preview.estimated_recipients)}
-                      </p>
+                      <p className="text-xl font-bold text-neutral-900">{formatNumber(preview.estimated_recipients)}</p>
                       <div className="text-xs text-neutral-400 mt-0.5 space-y-0.5">
                         {preview.customer_count > 0 && <p>👤 {formatNumber(preview.customer_count)} customers</p>}
                         {preview.business_count > 0 && <p>🏢 {formatNumber(preview.business_count)} businesses</p>}
@@ -354,9 +556,7 @@ export default function NewSmsCampaignPage() {
                     </div>
                     <div>
                       <p className="text-xs text-neutral-500">Estimated Cost</p>
-                      <p className="text-xl font-bold text-neutral-900">
-                        {formatCurrency(preview.estimated_cost)}
-                      </p>
+                      <p className="text-xl font-bold text-neutral-900">{formatCurrency(preview.estimated_cost)}</p>
                     </div>
                   </div>
 
@@ -371,9 +571,7 @@ export default function NewSmsCampaignPage() {
                 </>
               ) : (
                 <div className="text-center py-6">
-                  <p className="text-xs text-neutral-400">
-                    Click Preview to see recipient count and cost estimate
-                  </p>
+                  <p className="text-xs text-neutral-400">Click Preview to see recipient count and cost estimate</p>
                 </div>
               )}
             </CardContent>
@@ -393,26 +591,11 @@ export default function NewSmsCampaignPage() {
           )}
 
           <div className="flex flex-col gap-2">
-            <Button
-              variant="secondary"
-              size="lg"
-              className="w-full"
-              loading={previewing}
-              disabled={!message}
-              onClick={handlePreview}
-            >
-              <Eye className="w-4 h-4" />
-              Preview Recipients
+            <Button variant="secondary" size="lg" className="w-full" loading={previewing} disabled={!message} onClick={handlePreview}>
+              <Eye className="w-4 h-4" /> Preview Recipients
             </Button>
-            <Button
-              variant="black"
-              size="lg"
-              className="w-full"
-              disabled={!name || !message}
-              onClick={() => setShowConfirm(true)}
-            >
-              <Send className="w-4 h-4" />
-              Send Campaign
+            <Button variant="black" size="lg" className="w-full" disabled={!canSend} onClick={() => setShowConfirm(true)}>
+              <Send className="w-4 h-4" /> Send Campaign
             </Button>
             <Link href="/communications" className="text-center text-sm text-neutral-500 hover:text-neutral-700 py-1">
               Cancel
@@ -421,14 +604,11 @@ export default function NewSmsCampaignPage() {
         </div>
       </div>
 
-      {/* Confirm modal */}
       {showConfirm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
             <h3 className="text-base font-semibold text-neutral-900 mb-2">Confirm Send Campaign</h3>
-            <p className="text-sm text-neutral-600 mb-1">
-              Campaign: <strong>&ldquo;{name}&rdquo;</strong>
-            </p>
+            <p className="text-sm text-neutral-600 mb-1">Campaign: <strong>&ldquo;{name}&rdquo;</strong></p>
             {preview && (
               <p className="text-sm text-neutral-600 mb-4">
                 Will send to <strong>{formatNumber(preview.estimated_recipients)} recipients</strong>.

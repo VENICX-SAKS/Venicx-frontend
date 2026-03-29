@@ -36,7 +36,7 @@ export function ActionCards() {
         <Link href="/communications/email" className="flex-shrink-0">
           <Button variant="black" size="sm">
             <Plus className="w-4 h-4" />
-            New Template
+            New Campaign
           </Button>
         </Link>
       </div>
