@@ -31,7 +31,7 @@ interface BusinessResponse {
 
 export function BusinessRecordsTable({ query }: { query: string }) {
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const limit = 10;
 
   useEffect(() => { setPage(1); }, [query]);
 
