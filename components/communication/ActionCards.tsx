@@ -28,7 +28,7 @@ export function ActionCards() {
           <Mail className="w-6 h-6 text-[#10B981]" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-neutral-900">Email Templates</h3>
+          <h3 className="text-sm font-semibold text-neutral-900">Email Campaigns</h3>
           <p className="text-xs text-neutral-500 mt-0.5">
             Manage templated emails and campaigns
           </p>

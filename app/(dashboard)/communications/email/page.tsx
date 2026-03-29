@@ -2,14 +2,14 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Send, AlertCircle } from "lucide-react";
+import { ArrowLeft, Mail, Send, Eye, Users, DollarSign, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { useMutation } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { RecipientPicker, type AudienceMode } from "@/components/communication/RecipientPicker";
+import { formatNumber } from "@/lib/utils";
 
 const DEFAULT_TEMPLATES = [
   {
@@ -42,16 +42,34 @@ const DEFAULT_TEMPLATES = [
   },
 ];
 
+const AUDIENCE_OPTIONS = [
+  { value: "customers_with_consent", label: "Customers with email consent" },
+  { value: "all_customers",          label: "All customers (with stored email)" },
+  { value: "customers_by_province",  label: "Customers by province" },
+  { value: "all_businesses",         label: "All businesses" },
+  { value: "businesses_by_industry", label: "Businesses by industry" },
+  { value: "all_branches",           label: "All branches" },
+  { value: "both",                   label: "Customers + businesses + branches" },
+];
+
+const BUSINESS_RECIPIENT_OPTIONS = [
+  { value: "business", label: "Business contact only" },
+  { value: "branches", label: "All branch contacts" },
+  { value: "both",     label: "Business + all branches" },
+];
+
 const EMAIL_VARIABLES = [
   "{{first_name}}", "{{last_name}}",
   "{{email}}", "{{customer_id}}",
   "{{province}}", "{{application_url}}",
+  "{{display_name}}",
 ];
 
 const SAMPLE = {
   first_name: "John", last_name: "Doe",
   email: "john@example.com", customer_id: "VCX-001",
   province: "Gauteng", application_url: "https://app.venicx.com/apply/VCX-001",
+  display_name: "John Doe",
 };
 
 function renderWithSample(text: string) {
@@ -61,27 +79,62 @@ function renderWithSample(text: string) {
     .replace(/{{email}}/g, SAMPLE.email)
     .replace(/{{customer_id}}/g, SAMPLE.customer_id)
     .replace(/{{province}}/g, SAMPLE.province)
-    .replace(/{{application_url}}/g, SAMPLE.application_url);
+    .replace(/{{application_url}}/g, SAMPLE.application_url)
+    .replace(/{{display_name}}/g, SAMPLE.display_name);
 }
 
-export default function EmailTemplatesPage() {
+const needsBusinessRecipientType = (audience: string) =>
+  ["all_businesses", "businesses_by_industry", "both"].includes(audience);
+
+interface PreviewResult {
+  estimated_recipients: number;
+  customer_count: number;
+  business_count: number;
+  branch_count: number;
+  estimated_cost: number;
+}
+
+interface CampaignQueued {
+  campaign_id: string;
+  status: string;
+  total_recipients: number;
+  message: string;
+}
+
+export default function EmailCampaignPage() {
   const [selected, setSelected] = useState(DEFAULT_TEMPLATES[0]);
   const [subject, setSubject] = useState(DEFAULT_TEMPLATES[0].subject);
   const [content, setContent] = useState(DEFAULT_TEMPLATES[0].content);
   const [previewTab, setPreviewTab] = useState<"desktop" | "mobile">("desktop");
-  const [saved, setSaved] = useState(false);
+  const [audience, setAudience] = useState("customers_with_consent");
+  const [provinceFilter, setProvinceFilter] = useState("");
+  const [industryFilter, setIndustryFilter] = useState("");
+  const [businessRecipientType, setBusinessRecipientType] = useState("business");
+  const [preview, setPreview] = useState<PreviewResult | null>(null);
+  const [previewing, setPreviewing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [queued, setQueued] = useState<CampaignQueued | null>(null);
   const [sendError, setSendError] = useState("");
-  const [sendResult, setSendResult] = useState<{ sent: number; failed: number; skipped_no_consent: number } | null>(null);
-  const [audienceMode, setAudienceMode] = useState<AudienceMode>("consent");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [testEmailSent, setTestEmailSent] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
 
+  const buildPayload = () => ({
+    name: selected.name,
+    channel: "email",
+    audience_type: audience,
+    audience_filter:
+      audience === "customers_by_province" ? { province: provinceFilter } :
+      audience === "businesses_by_industry" ? { industry: industryFilter } :
+      null,
+    business_recipient_type: needsBusinessRecipientType(audience) ? businessRecipientType : null,
+    message_content: content.replace(/\n/g, "<br>"),
+    email_subject: subject,
+  });
+
   const { mutateAsync: sendCampaign, isPending: sending } = useMutation({
-    mutationFn: (body: { campaign_name: string; subject: string; html_body: string; audience: string; customer_ids?: string[] }) =>
-      api.post<{ sent: number; failed: number; skipped_no_consent: number }>("/api/v1/communication/email/campaign", body),
+    mutationFn: (body: ReturnType<typeof buildPayload>) =>
+      api.post<CampaignQueued>("/api/v1/communication/campaigns", body),
   });
 
   const { mutateAsync: sendTestEmail, isPending: testSending } = useMutation({
@@ -89,17 +142,27 @@ export default function EmailTemplatesPage() {
       api.post("/api/v1/communication/email/test", body),
   });
 
+  const handlePreview = async () => {
+    setPreviewing(true);
+    setSendError("");
+    try {
+      const result = await api.post<PreviewResult>(
+        "/api/v1/communication/campaigns/preview",
+        buildPayload()
+      );
+      setPreview(result);
+    } catch (e) {
+      setSendError(e instanceof ApiError ? e.message : "Preview failed");
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
   const handleSendCampaign = async () => {
     setSendError("");
     try {
-      const res = await sendCampaign({
-        campaign_name: selected.name,
-        subject,
-        html_body: content.replace(/\n/g, "<br>"),
-        audience: audienceMode,
-        customer_ids: audienceMode === "selected" ? selectedIds : undefined,
-      });
-      setSendResult(res);
+      const res = await sendCampaign(buildPayload());
+      setQueued(res);
       setShowConfirm(false);
     } catch (e) {
       setSendError(e instanceof ApiError ? e.message : "Failed to send campaign");
@@ -126,7 +189,7 @@ export default function EmailTemplatesPage() {
     setSelected(t);
     setSubject(t.subject);
     setContent(t.content);
-    setSaved(false);
+    setPreview(null);
   };
 
   const insertVariable = (variable: string) => {
@@ -145,6 +208,23 @@ export default function EmailTemplatesPage() {
   const renderedSubject = renderWithSample(subject);
   const renderedContent = renderWithSample(content);
 
+  if (queued) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center">
+          <Send className="w-8 h-8 text-success" />
+        </div>
+        <h2 className="text-lg font-semibold text-neutral-900">Campaign Dispatched!</h2>
+        <p className="text-sm text-neutral-500 text-center">
+          Sending to <strong>{formatNumber(queued.total_recipients)}</strong> recipients in the background.
+        </p>
+        <Link href="/communications">
+          <Button variant="primary">Back to Communications</Button>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
@@ -156,14 +236,14 @@ export default function EmailTemplatesPage() {
             </button>
           </Link>
           <div>
-            <h2 className="text-xl font-bold text-neutral-900">Email Templates</h2>
-            <p className="text-sm text-neutral-500">Manage templated email communications</p>
+            <h2 className="text-xl font-bold text-neutral-900">Email Campaign</h2>
+            <p className="text-sm text-neutral-500">SendGrid Integration</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="black" onClick={() => setSaved(true)}>
-            <Mail className="w-4 h-4" />
-            {saved ? "Saved!" : "Save Template"}
+          <Button variant="secondary" loading={previewing} disabled={!subject || !content} onClick={handlePreview}>
+            <Eye className="w-4 h-4" />
+            Preview Recipients
           </Button>
           <Button variant="primary" onClick={() => setShowConfirm(true)} disabled={!subject || !content}>
             <Send className="w-4 h-4" />
@@ -175,6 +255,7 @@ export default function EmailTemplatesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
         {/* Left — templates list */}
         <div className="lg:col-span-1 flex flex-col gap-3">
+          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide px-1">Templates</p>
           {DEFAULT_TEMPLATES.map(t => (
             <button
               key={t.id}
@@ -189,15 +270,30 @@ export default function EmailTemplatesPage() {
                 {t.name}
               </p>
               <p className="text-xs text-neutral-500 mt-0.5">{t.description}</p>
-              <p className="text-xs text-neutral-400 mt-1 truncate">Subject: {t.subject}</p>
             </button>
           ))}
 
+          {/* Audience + preview summary */}
+          {preview && (
+            <div className="border border-neutral-200 rounded-xl p-4 bg-white flex flex-col gap-2">
+              <p className="text-xs font-semibold text-neutral-700">Recipients</p>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Users className="w-4 h-4 text-primary" />
+                </div>
+                <p className="text-xl font-bold text-neutral-900">{formatNumber(preview.estimated_recipients)}</p>
+              </div>
+              <div className="text-xs text-neutral-400 space-y-0.5">
+                {preview.customer_count > 0 && <p>👤 {formatNumber(preview.customer_count)} customers</p>}
+                {preview.business_count > 0 && <p>🏢 {formatNumber(preview.business_count)} businesses</p>}
+                {preview.branch_count > 0 && <p>📍 {formatNumber(preview.branch_count)} branches</p>}
+              </div>
+            </div>
+          )}
+
           <div className="border border-neutral-200 rounded-xl p-4 bg-white">
             <p className="text-sm font-semibold text-neutral-900 mb-1">Email Provider</p>
-            <p className="text-xs text-neutral-500 mb-3">
-              Configure your email provider (SendGrid, Mailgun, or Postmark)
-            </p>
+            <p className="text-xs text-neutral-500 mb-3">SendGrid — open & click tracking enabled</p>
             <Link href="/settings">
               <Button variant="secondary" size="sm">Configure</Button>
             </Link>
@@ -208,7 +304,7 @@ export default function EmailTemplatesPage() {
         <div className="lg:col-span-3 flex flex-col gap-4">
           <Card>
             <CardContent className="py-5 flex flex-col gap-4">
-              <h3 className="text-sm font-semibold text-neutral-900">Edit Template: {selected.name}</h3>
+              <h3 className="text-sm font-semibold text-neutral-900">Edit: {selected.name}</h3>
 
               <Input
                 label="Email Subject"
@@ -229,7 +325,7 @@ export default function EmailTemplatesPage() {
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <p className="text-sm font-semibold text-blue-700 mb-1">Template Variables</p>
-                <p className="text-xs text-blue-600 mb-3">Use these placeholders to personalize your email:</p>
+                <p className="text-xs text-blue-600 mb-3">Click to insert at cursor:</p>
                 <div className="grid grid-cols-2 gap-2">
                   {EMAIL_VARIABLES.map(v => (
                     <button
@@ -243,16 +339,59 @@ export default function EmailTemplatesPage() {
                 </div>
               </div>
 
-              {/* Recipient picker */}
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-neutral-700">Target Audience</label>
-                <RecipientPicker
-                  channel="email"
-                  mode={audienceMode}
-                  onModeChange={setAudienceMode}
-                  selectedIds={selectedIds}
-                  onSelectedChange={setSelectedIds}
-                />
+              {/* Audience selector */}
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-neutral-700">Target Audience</label>
+                  <select
+                    value={audience}
+                    onChange={e => { setAudience(e.target.value); setPreview(null); }}
+                    className="border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {AUDIENCE_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {audience === "customers_by_province" && (
+                  <Input
+                    label="Province"
+                    placeholder="e.g., KwaZulu-Natal"
+                    value={provinceFilter}
+                    onChange={e => { setProvinceFilter(e.target.value); setPreview(null); }}
+                  />
+                )}
+
+                {audience === "businesses_by_industry" && (
+                  <Input
+                    label="Industry"
+                    placeholder="e.g., Healthcare"
+                    value={industryFilter}
+                    onChange={e => { setIndustryFilter(e.target.value); setPreview(null); }}
+                  />
+                )}
+
+                {needsBusinessRecipientType(audience) && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium text-neutral-700">Send to</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {BUSINESS_RECIPIENT_OPTIONS.map(o => (
+                        <button
+                          key={o.value}
+                          onClick={() => { setBusinessRecipientType(o.value); setPreview(null); }}
+                          className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                            businessRecipientType === o.value
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-neutral-200 text-neutral-600 hover:border-neutral-300"
+                          }`}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -311,15 +450,14 @@ export default function EmailTemplatesPage() {
             </CardContent>
           </Card>
 
-          {/* Tracking */}
+          {/* Tracking info */}
           <Card>
             <CardContent className="py-5">
               <h3 className="text-sm font-semibold text-neutral-900 mb-3">Email Tracking</h3>
               <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4">
                 <p className="text-xs text-neutral-500">
-                  Open tracking and click tracking are enabled by default for all emails via SendGrid.
-                  Engagement events are automatically recorded to each customer&apos;s Super Record
-                  timeline via webhook.
+                  Open tracking and click tracking are enabled by default via SendGrid.
+                  Engagement events are automatically recorded to each record&apos;s timeline via webhook.
                 </p>
               </div>
             </CardContent>
@@ -327,14 +465,6 @@ export default function EmailTemplatesPage() {
         </div>
       </div>
 
-      {/* Send result */}
-      {sendResult && (
-        <div className="fixed bottom-6 right-6 bg-success text-white px-4 py-3 rounded-xl shadow-lg z-50 text-sm">
-          Campaign sent — {sendResult.sent} delivered, {sendResult.failed} failed, {sendResult.skipped_no_consent} skipped
-        </div>
-      )}
-
-      {/* Error toast */}
       {sendError && (
         <div className="fixed bottom-6 right-6 bg-error text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg z-50">
           <AlertCircle className="w-4 h-4" />
@@ -347,9 +477,18 @@ export default function EmailTemplatesPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
             <h3 className="text-base font-semibold text-neutral-900 mb-2">Send Email Campaign</h3>
-            <p className="text-sm text-neutral-600 mb-4">
-              Send <strong>&ldquo;{subject}&rdquo;</strong> to all customers with email consent granted via SendGrid.
+            <p className="text-sm text-neutral-600 mb-1">
+              Template: <strong>&ldquo;{subject}&rdquo;</strong>
             </p>
+            {preview ? (
+              <p className="text-sm text-neutral-600 mb-4">
+                Will send to <strong>{formatNumber(preview.estimated_recipients)} recipients</strong>.
+              </p>
+            ) : (
+              <p className="text-sm text-neutral-600 mb-4">
+                Audience: <strong>{AUDIENCE_OPTIONS.find(o => o.value === audience)?.label}</strong>
+              </p>
+            )}
             <div className="flex gap-2">
               <Button variant="primary" className="flex-1" loading={sending} onClick={handleSendCampaign}>
                 <Send className="w-4 h-4" /> Confirm &amp; Send
