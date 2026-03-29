@@ -63,14 +63,18 @@ const EMAIL_VARIABLES = [
   "{{first_name}}", "{{last_name}}",
   "{{email}}", "{{customer_id}}",
   "{{province}}", "{{application_url}}",
-  "{{display_name}}",
+  "{{display_name}}", "{{business_name}}",
+  "{{business_phone}}", "{{business_email}}",
+  "{{website}}", "{{city}}",
 ];
 
 const SAMPLE = {
   first_name: "John", last_name: "Doe",
   email: "john@example.com", customer_id: "VCX-001",
   province: "Gauteng", application_url: "https://app.venicx.com/apply/VCX-001",
-  display_name: "John Doe",
+  display_name: "John Doe", business_name: "Venicx Solar Ltd",
+  business_phone: "+27605694303", business_email: "info@venicx.com",
+  website: "venicx.com", city: "Cape Town",
 };
 
 function renderWithSample(text: string) {
@@ -81,7 +85,12 @@ function renderWithSample(text: string) {
     .replace(/{{customer_id}}/g, SAMPLE.customer_id)
     .replace(/{{province}}/g, SAMPLE.province)
     .replace(/{{application_url}}/g, SAMPLE.application_url)
-    .replace(/{{display_name}}/g, SAMPLE.display_name);
+    .replace(/{{display_name}}/g, SAMPLE.display_name)
+    .replace(/{{business_name}}/g, SAMPLE.business_name)
+    .replace(/{{business_phone}}/g, SAMPLE.business_phone)
+    .replace(/{{business_email}}/g, SAMPLE.business_email)
+    .replace(/{{website}}/g, SAMPLE.website)
+    .replace(/{{city}}/g, SAMPLE.city);
 }
 
 const needsBusinessRecipientType = (audience: string) =>

@@ -33,16 +33,23 @@ const BUSINESS_RECIPIENT_OPTIONS = [
 ];
 
 const VARIABLES = [
-  { key: "first_name",   label: "{{first_name}}" },
-  { key: "last_name",    label: "{{last_name}}" },
-  { key: "customer_id",  label: "{{customer_id}}" },
-  { key: "province",     label: "{{province}}" },
-  { key: "display_name", label: "{{display_name}}" },
+  { key: "first_name",    label: "{{first_name}}" },
+  { key: "last_name",     label: "{{last_name}}" },
+  { key: "customer_id",   label: "{{customer_id}}" },
+  { key: "province",      label: "{{province}}" },
+  { key: "display_name",  label: "{{display_name}}" },
+  { key: "business_name", label: "{{business_name}}" },
+  { key: "business_phone",label: "{{business_phone}}" },
+  { key: "business_email",label: "{{business_email}}" },
+  { key: "website",       label: "{{website}}" },
+  { key: "city",          label: "{{city}}" },
 ];
 
 const SAMPLE = {
   first_name: "John", last_name: "Doe",
   customer_id: "VCX-001", province: "Gauteng", display_name: "John Doe",
+  business_name: "Venicx Solar Ltd", business_phone: "+27605694303",
+  business_email: "info@venicx.com", website: "venicx.com", city: "Cape Town",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -63,7 +70,12 @@ function renderPreview(message: string) {
     .replace(/{{last_name}}/g, SAMPLE.last_name)
     .replace(/{{customer_id}}/g, SAMPLE.customer_id)
     .replace(/{{province}}/g, SAMPLE.province)
-    .replace(/{{display_name}}/g, SAMPLE.display_name);
+    .replace(/{{display_name}}/g, SAMPLE.display_name)
+    .replace(/{{business_name}}/g, SAMPLE.business_name)
+    .replace(/{{business_phone}}/g, SAMPLE.business_phone)
+    .replace(/{{business_email}}/g, SAMPLE.business_email)
+    .replace(/{{website}}/g, SAMPLE.website)
+    .replace(/{{city}}/g, SAMPLE.city);
 }
 
 const needsBusinessRecipientType = (a: string) =>
