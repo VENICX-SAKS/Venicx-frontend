@@ -9,6 +9,7 @@ import { MergeSuggestions } from "@/components/super-record/MergeSuggestions";
 import { BusinessRecordsTable } from "@/components/super-record/BusinessRecordsTable";
 import { BranchesTable } from "@/components/super-record/BranchesTable";
 import { Pagination } from "@/components/super-record/Pagination";
+import { CompletenessBar } from "@/components/ui/CompletenessBar";
 import { formatNumber, formatCurrency, cn } from "@/lib/utils";
 import type { SearchResult } from "@/hooks/useSuperRecords";
 
@@ -82,6 +83,14 @@ function CustomerCard({ record }: { record: SearchResult }) {
           <ScoreBar label="Approval" value={approvalScore} color="bg-success" />
           <ScoreBar label="Duplicate" value={duplicateScore} color="bg-warning" />
           <ScoreBar label="Fraud" value={fraudScore} color="bg-error" />
+        </div>
+
+        {/* Completeness */}
+        <div className="flex items-center gap-3 mt-2">
+          <span className="text-xs text-neutral-500 w-20 flex-shrink-0">Completeness</span>
+          <div className="flex-1">
+            <CompletenessBar score={record.completeness_score ?? 0} />
+          </div>
         </div>
       </div>
 

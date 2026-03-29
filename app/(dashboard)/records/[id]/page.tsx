@@ -4,7 +4,7 @@ import { use } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Phone, Mail, CreditCard, MapPin,
-  User, GitMerge, MessageSquare, Clock,
+  User, GitMerge, MessageSquare, Clock, CheckCircle, XCircle,
 } from "lucide-react";
 import { useSuperRecord } from "@/hooks/useSuperRecords";
 import { ConsentPanel } from "@/components/super-record/ConsentPanel";
@@ -12,6 +12,7 @@ import { Timeline } from "@/components/super-record/Timeline";
 import { Card, CardHeader, CardContent } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Spinner } from "@/components/ui/Spinner";
+import { CompletenessBar } from "@/components/ui/CompletenessBar";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
 export default function RecordDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -46,6 +47,19 @@ export default function RecordDetailPage({ params }: { params: Promise<{ id: str
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  const completenessScore = [
+    record.demographics.first_name,
+    record.demographics.last_name,
+    record.demographics.date_of_birth,
+    record.identity.msisdn_last4,
+    record.identity.email_domain,
+    record.identity.has_national_id ? "yes" : null,
+    record.demographics.province,
+    record.demographics.city,
+    record.demographics.address_line_1,
+    record.demographics.gender,
+  ].filter(Boolean).length * 10;
 
   return (
     <div className="flex flex-col gap-5 max-w-4xl">
@@ -251,6 +265,50 @@ export default function RecordDetailPage({ params }: { params: Promise<{ id: str
             </CardHeader>
             <CardContent>
               <Timeline events={record.timeline} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-neutral-900">Data Completeness</h3>
+                <span className={`text-sm font-bold ${
+                  completenessScore >= 80 ? "text-success" :
+                  completenessScore >= 50 ? "text-warning" : "text-error"
+                }`}>{completenessScore}%</span>
+              </div>
+              <div className="mt-2">
+                <CompletenessBar score={completenessScore} showLabel={false} size="md" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { label: "First Name",    present: !!record.demographics.first_name },
+                  { label: "Last Name",     present: !!record.demographics.last_name },
+                  { label: "Date of Birth", present: !!record.demographics.date_of_birth },
+                  { label: "Phone Number",  present: !!record.identity.msisdn_last4 },
+                  { label: "Email Address", present: !!record.identity.email_domain },
+                  { label: "National ID",   present: record.identity.has_national_id },
+                  { label: "Province",      present: !!record.demographics.province },
+                  { label: "City",          present: !!record.demographics.city },
+                  { label: "Address",       present: !!record.demographics.address_line_1 },
+                  { label: "Gender",        present: !!record.demographics.gender },
+                ] as { label: string; present: boolean }[]).map(({ label, present }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      present ? "bg-success/10" : "bg-error/10"
+                    }`}>
+                      {present
+                        ? <CheckCircle className="w-3 h-3 text-success" />
+                        : <XCircle className="w-3 h-3 text-error" />}
+                    </span>
+                    <span className={`text-xs ${present ? "text-neutral-700" : "text-neutral-400"}`}>
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>

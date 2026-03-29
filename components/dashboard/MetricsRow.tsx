@@ -1,5 +1,5 @@
 import { MetricCard } from "@/components/ui/MetricCard";
-import { Users, TrendingUp, ShieldCheck, MessageSquare } from "lucide-react";
+import { Users, TrendingUp, ShieldCheck, MessageSquare, BarChart2 } from "lucide-react";
 import { formatNumber, formatPercent } from "@/lib/utils";
 import type { DashboardMetrics } from "@/types";
 
@@ -23,8 +23,8 @@ function pctChange(current: number | undefined, previous: number | undefined): {
 export function MetricsRow({ data, isLoading }: MetricsRowProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
+        {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="bg-white rounded-xl border border-neutral-200 h-32 animate-pulse" />
         ))}
       </div>
@@ -76,10 +76,17 @@ export function MetricsRow({ data, isLoading }: MetricsRowProps) {
       change: smsChange?.label,
       changePositive: smsChange?.positive,
     },
+    {
+      label: "Avg Data Completeness",
+      value: `${(data?.avg_data_completeness ?? 0).toFixed(1)}%`,
+      icon: <BarChart2 className="w-5 h-5" />,
+      iconBg: "bg-[#ECFDF5]",
+      iconColor: "text-[#10B981]",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
       {metrics.map((m) => (
         <MetricCard key={m.label} {...m} />
       ))}

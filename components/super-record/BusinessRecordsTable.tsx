@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Building2, Globe, Mail, MapPin, Hash } from "lucide-react";
+import { CompletenessBar } from "@/components/ui/CompletenessBar";
 import { formatDate } from "@/lib/utils";
 
 interface BusinessRow {
@@ -16,6 +17,7 @@ interface BusinessRow {
   business_email: string | null;
   website: string | null;
   created_at: string;
+  completeness_score: number;
 }
 
 interface BusinessResponse {
@@ -76,7 +78,8 @@ export function BusinessRecordsTable({ query }: { query: string }) {
         <span className="col-span-4 text-xs font-medium text-neutral-500 uppercase tracking-wide">Business</span>
         <span className="col-span-2 text-xs font-medium text-neutral-500 uppercase tracking-wide">Industry</span>
         <span className="col-span-2 text-xs font-medium text-neutral-500 uppercase tracking-wide">Location</span>
-        <span className="col-span-3 text-xs font-medium text-neutral-500 uppercase tracking-wide">Contact</span>
+        <span className="col-span-2 text-xs font-medium text-neutral-500 uppercase tracking-wide">Contact</span>
+        <span className="col-span-1 text-xs font-medium text-neutral-500 uppercase tracking-wide">Complete</span>
         <span className="col-span-1 text-xs font-medium text-neutral-500 uppercase tracking-wide">Added</span>
       </div>
 
@@ -124,7 +127,7 @@ export function BusinessRecordsTable({ query }: { query: string }) {
             </div>
 
             {/* Contact */}
-            <div className="md:col-span-3 flex flex-col gap-1 min-w-0">
+            <div className="md:col-span-2 flex flex-col gap-1 min-w-0">
               {b.business_email && (
                 <div className="flex items-center gap-1.5 text-xs text-neutral-600 min-w-0">
                   <Mail className="w-3 h-3 text-neutral-400 flex-shrink-0" />
@@ -145,6 +148,15 @@ export function BusinessRecordsTable({ query }: { query: string }) {
                 </div>
               )}
               {!b.business_email && !b.website && <span className="text-sm text-neutral-300">—</span>}
+            </div>
+
+            {/* Completeness */}
+            <div className="md:col-span-1 flex flex-col gap-1">
+              <CompletenessBar score={b.completeness_score ?? 0} showLabel={false} />
+              <p className="text-xs text-neutral-400">
+                {b.completeness_score >= 80 ? "Complete" :
+                 b.completeness_score >= 50 ? "Partial" : "Incomplete"}
+              </p>
             </div>
 
             {/* Date */}

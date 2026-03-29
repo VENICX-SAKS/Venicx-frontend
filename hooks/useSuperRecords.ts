@@ -16,6 +16,7 @@ export interface SearchResult {
   created_at: string;
   lead_count: number;
   ltv_zar: number;
+  completeness_score: number;
 }
 
 export interface SearchResponse {
