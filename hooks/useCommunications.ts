@@ -47,10 +47,14 @@ export function useCommPerformance() {
   });
 }
 
-export function useCommList() {
+export function useCommList(page = 1) {
   return useQuery({
-    queryKey: ["communications", "list"],
-    queryFn: () => api.get<CommListItem[]>("/api/v1/communication/list"),
+    queryKey: ["communications", "list", page],
+    queryFn: () =>
+      api.get<{ data: CommListItem[]; total: number; page: number; limit: number }>(
+        `/api/v1/communication/list?page=${page}&limit=20`
+      ),
     refetchInterval: 15_000,
+    placeholderData: (prev) => prev,
   });
 }

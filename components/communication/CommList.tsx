@@ -1,16 +1,19 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { MessageSquare, Mail } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Pagination } from "@/components/super-record/Pagination";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import type { CommListItem } from "@/hooks/useCommunications";
+import { useCommList } from "@/hooks/useCommunications";
 
-interface CommListProps {
-  items: CommListItem[];
-  isLoading: boolean;
-}
+export function CommList() {
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useCommList(page);
+  const items = data?.data ?? [];
 
-export function CommList({ items, isLoading }: CommListProps) {
   return (
     <Card>
       <CardHeader>
@@ -91,6 +94,17 @@ export function CommList({ items, isLoading }: CommListProps) {
             </div>
           ))}
       </div>
+
+      {data && (
+        <div className="px-6 py-4 border-t border-neutral-100">
+          <Pagination
+            page={data.page}
+            limit={data.limit}
+            total={data.total}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
     </Card>
   );
 }
