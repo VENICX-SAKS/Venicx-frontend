@@ -22,9 +22,12 @@ export interface CommListItem {
   channel: string;
   status: string;
   provider: string;
+  provider_message_id: string | null;
   content_preview: string | null;
   cost_amount: string | null;
   sent_at: string | null;
+  delivered_at: string | null;
+  failed_reason: string | null;
   created_at: string;
 }
 

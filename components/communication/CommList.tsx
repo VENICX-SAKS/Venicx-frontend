@@ -60,10 +60,27 @@ export function CommList({ items, isLoading }: CommListProps) {
                 {item.content_preview && (
                   <p className="text-xs text-neutral-500 truncate mt-0.5">{item.content_preview}</p>
                 )}
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  {item.sent_at ? formatDate(item.sent_at) : formatDate(item.created_at)}
-                  {" · "}{item.provider}
-                </p>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <p className="text-xs text-neutral-400">
+                    {item.sent_at ? formatDate(item.sent_at) : formatDate(item.created_at)}
+                    {" · "}{item.provider}
+                  </p>
+                  {item.provider_message_id && (
+                    <p className="text-xs text-neutral-300 font-mono truncate max-w-[140px]">
+                      ID: {item.provider_message_id}
+                    </p>
+                  )}
+                  {item.delivered_at && (
+                    <p className="text-xs text-success">
+                      Delivered {formatDate(item.delivered_at)}
+                    </p>
+                  )}
+                  {item.failed_reason && (
+                    <p className="text-xs text-error truncate max-w-[200px]" title={item.failed_reason}>
+                      {item.failed_reason}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {item.cost_amount && (
