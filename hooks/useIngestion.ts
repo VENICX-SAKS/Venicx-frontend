@@ -40,10 +40,14 @@ export function useBatchStatus(batchId: string | null, enabled: boolean) {
   });
 }
 
-export function useBatchList() {
+export function useBatchList(page = 1) {
   return useQuery({
-    queryKey: ["ingestion", "batches"],
-    queryFn: () => api.get<BatchStatus[]>("/api/v1/ingestion/batches"),
+    queryKey: ["ingestion", "batches", page],
+    queryFn: () =>
+      api.get<{ data: BatchStatus[]; total: number; page: number; limit: number }>(
+        `/api/v1/ingestion/batches?page=${page}&limit=20`
+      ),
+    placeholderData: (prev) => prev,
   });
 }
 

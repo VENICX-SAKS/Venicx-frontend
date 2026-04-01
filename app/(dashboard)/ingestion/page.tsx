@@ -12,6 +12,7 @@ import type { BatchStatus } from "@/hooks/useIngestion";
 import { formatNumber } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { Pagination } from "@/components/super-record/Pagination";
 
 // Parse CSV headers client-side (first 4KB)
 function parseCsvHeaders(file: File): Promise<string[]> {
@@ -223,6 +224,7 @@ export default function IngestionPage() {
   const [dragOver, setDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [recordType, setRecordType] = useState<"customer" | "business" | "branch">("customer");
+  const [batchPage, setBatchPage] = useState(1);
   const [mappingModal, setMappingModal] = useState<{
     batchId: string;
     columns: string[];
@@ -230,7 +232,8 @@ export default function IngestionPage() {
   } | null>(null);
   const [pipelineBatchId, setPipelineBatchId] = useState<string | null>(null);
 
-  const { data: batches, refetch: refetchBatches } = useBatchList();
+  const { data: batchData, refetch: refetchBatches } = useBatchList(batchPage);
+  const batches = batchData?.data ?? [];
   const { data: templates } = useTemplates();
   const { mutateAsync: uploadFile, isPending: uploading } = useUploadFile();
   const { mutateAsync: mapFields, isPending: mapping } = useMapFields();
@@ -396,10 +399,10 @@ export default function IngestionPage() {
           <h2 className="text-sm font-semibold text-neutral-900">Upload History</h2>
           <button
             className="text-xs text-primary hover:underline disabled:opacity-40"
-            disabled={!batches || batches.filter(b => b.status !== "mapping").length === 0}
+            disabled={batches.filter(b => b.status !== "mapping").length === 0}
             onClick={() => {
-              const active = batches?.find(b => b.status === "processing" || b.status === "pending")
-                ?? batches?.find(b => b.status !== "mapping");
+              const active = batches.find(b => b.status === "processing" || b.status === "pending")
+                ?? batches.find(b => b.status !== "mapping");
               if (active) setPipelineBatchId(active.id);
             }}
           >
@@ -442,6 +445,16 @@ export default function IngestionPage() {
             ))
           )}
         </div>
+        {batchData && batchData.total > batchData.limit && (
+          <div className="px-5 py-4 border-t border-neutral-100">
+            <Pagination
+              page={batchData.page}
+              limit={batchData.limit}
+              total={batchData.total}
+              onPageChange={setBatchPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Field mapping modal */}
