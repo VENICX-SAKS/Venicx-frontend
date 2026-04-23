@@ -6,6 +6,7 @@ import { ArrowLeft, Mail, Send, Eye, Users, AlertCircle, Search, X, CheckCircle 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { BatchSelector } from "@/components/communication/BatchSelector";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,6 +52,7 @@ const AUDIENCE_OPTIONS = [
   { value: "all_branches",           label: "All branches" },
   { value: "both",                   label: "Customers + businesses + branches" },
   { value: "selected_recipients",    label: "Select specific recipients" },
+  { value: "batch_targeting",        label: "Target specific batches" },
 ];
 
 const BUSINESS_RECIPIENT_OPTIONS = [
@@ -255,6 +257,8 @@ export default function EmailCampaignPage() {
   const [industryFilter, setIndustryFilter] = useState("");
   const [businessRecipientType, setBusinessRecipientType] = useState("business");
   const [selectedRecipients, setSelectedRecipients] = useState<SelectedRecipient[]>([]);
+  const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
+  const [batchContactableCount, setBatchContactableCount] = useState(0);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -267,7 +271,8 @@ export default function EmailCampaignPage() {
   const buildPayload = () => ({
     name: selected.name,
     channel: "email",
-    audience_type: audience === "selected_recipients"
+    audience_type: audience === "batch_targeting" ? "batch"
+      : audience === "selected_recipients"
       ? (selectedRecipients.some(r => r.type === "customer") && selectedRecipients.some(r => r.type === "business") ? "both"
         : selectedRecipients.some(r => r.type === "business") ? "all_businesses" : "all_customers")
       : audience,
@@ -278,6 +283,7 @@ export default function EmailCampaignPage() {
     business_recipient_type: needsBusinessRecipientType(audience) ? businessRecipientType : null,
     message_content: content.replace(/\n/g, "<br>"),
     email_subject: subject,
+    batch_ids: audience === "batch_targeting" ? selectedBatchIds : undefined,
     selected_customer_ids: audience === "selected_recipients"
       ? selectedRecipients.filter(r => r.type === "customer").map(r => r.id)
       : undefined,
@@ -297,6 +303,16 @@ export default function EmailCampaignPage() {
   });
 
   const handlePreview = async () => {
+    if (audience === "batch_targeting") {
+      setPreview({
+        estimated_recipients: batchContactableCount,
+        customer_count: batchContactableCount,
+        business_count: 0,
+        branch_count: 0,
+        estimated_cost: 0,
+      });
+      return;
+    }
     if (audience === "selected_recipients") {
       setPreview({
         estimated_recipients: selectedRecipients.length,
@@ -409,7 +425,15 @@ export default function EmailCampaignPage() {
             <Eye className="w-4 h-4" />
             Preview Recipients
           </Button>
-          <Button variant="primary" onClick={() => setShowConfirm(true)} disabled={!subject || !content}>
+          <Button 
+            variant="primary" 
+            onClick={() => setShowConfirm(true)} 
+            disabled={
+              !subject || !content || 
+              (audience === "selected_recipients" && selectedRecipients.length === 0) ||
+              (audience === "batch_targeting" && selectedBatchIds.length === 0)
+            }
+          >
             <Send className="w-4 h-4" />
             Send Campaign
           </Button>
@@ -566,6 +590,17 @@ export default function EmailCampaignPage() {
                       )}
                     </label>
                     <RecipientPicker selected={selectedRecipients} onChange={setSelectedRecipients} />
+                  </div>
+                )}
+
+                {audience === "batch_targeting" && (
+                  <div className="flex flex-col gap-1">
+                    <BatchSelector
+                      channel="email"
+                      selectedBatchIds={selectedBatchIds}
+                      onSelectionChange={setSelectedBatchIds}
+                      onContactableCountChange={setBatchContactableCount}
+                    />
                   </div>
                 )}
               </div>

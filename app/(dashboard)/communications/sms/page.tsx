@@ -9,6 +9,7 @@ import {
 import { Card, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { BatchSelector } from "@/components/communication/BatchSelector";
 import { formatNumber, formatCurrency, cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
@@ -24,6 +25,7 @@ const AUDIENCE_OPTIONS = [
   { value: "all_branches",           label: "All branches" },
   { value: "both",                   label: "Customers + businesses + branches" },
   { value: "selected_recipients",    label: "Select specific recipients" },
+  { value: "batch_targeting",        label: "Target specific batches" },
 ];
 
 const BUSINESS_RECIPIENT_OPTIONS = [
@@ -262,6 +264,8 @@ export default function NewSmsCampaignPage() {
   const [industryFilter, setIndustryFilter] = useState("");
   const [businessRecipientType, setBusinessRecipientType] = useState("business");
   const [selectedRecipients, setSelectedRecipients] = useState<SelectedRecipient[]>([]);
+  const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
+  const [batchContactableCount, setBatchContactableCount] = useState(0);
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -275,6 +279,17 @@ export default function NewSmsCampaignPage() {
   const msgPreview = renderPreview(message);
 
   const buildPayload = () => {
+    if (audience === "batch_targeting") {
+      return {
+        name,
+        channel: "sms",
+        audience_type: "batch",
+        audience_filter: null,
+        business_recipient_type: null,
+        message_content: message,
+        batch_ids: selectedBatchIds,
+      };
+    }
     if (audience === "selected_recipients") {
       const customerIds = selectedRecipients.filter(r => r.type === "customer").map(r => r.id);
       const businessIds = selectedRecipients.filter(r => r.type === "business").map(r => r.id);
@@ -322,6 +337,16 @@ export default function NewSmsCampaignPage() {
   }, [message]);
 
   const handlePreview = async () => {
+    if (audience === "batch_targeting") {
+      setPreview({
+        estimated_recipients: batchContactableCount,
+        customer_count: batchContactableCount,
+        business_count: 0,
+        branch_count: 0,
+        estimated_cost: batchContactableCount * segments * 0.5,
+      });
+      return;
+    }
     if (audience === "selected_recipients") {
       setPreview({
         estimated_recipients: selectedRecipients.length,
@@ -356,7 +381,9 @@ export default function NewSmsCampaignPage() {
     }
   };
 
-  const canSend = name && message && (audience !== "selected_recipients" || selectedRecipients.length > 0);
+  const canSend = name && message && 
+    (audience !== "selected_recipients" || selectedRecipients.length > 0) &&
+    (audience !== "batch_targeting" || selectedBatchIds.length > 0);
 
   if (queued) {
     return (
@@ -472,6 +499,18 @@ export default function NewSmsCampaignPage() {
                     )}
                   </label>
                   <RecipientPicker selected={selectedRecipients} onChange={setSelectedRecipients} />
+                </div>
+              )}
+
+              {/* Batch targeting */}
+              {audience === "batch_targeting" && (
+                <div className="flex flex-col gap-1">
+                  <BatchSelector
+                    channel="sms"
+                    selectedBatchIds={selectedBatchIds}
+                    onSelectionChange={setSelectedBatchIds}
+                    onContactableCountChange={setBatchContactableCount}
+                  />
                 </div>
               )}
 
