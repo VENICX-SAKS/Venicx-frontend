@@ -247,8 +247,8 @@ export default function IngestionPage() {
       setUploadError("Only CSV, XLSX, and JSON files are accepted.");
       return;
     }
-    if (file.size > 100 * 1024 * 1024) {
-      setUploadError("File exceeds the 100MB limit.");
+    if (file.size > 500 * 1024 * 1024) {
+      setUploadError("File exceeds the 500MB limit.");
       return;
     }
 
@@ -360,7 +360,7 @@ export default function IngestionPage() {
                 Drop files here or click to upload
               </p>
               <p className="text-xs text-neutral-400 mt-1">
-                Supports CSV, Excel (.xlsx), JSON files up to 100MB
+                Supports CSV, Excel (.xlsx), JSON files up to 500MB
               </p>
             </div>
             <Button variant="black" size="sm" loading={uploading}>

@@ -22,8 +22,8 @@ export function FileDropzone({ onFile, loading }: FileDropzoneProps) {
         setError("Only CSV, XLSX, and JSON files are accepted.");
         return;
       }
-      if (file.size > 100 * 1024 * 1024) {
-        setError("File exceeds the 100MB limit.");
+      if (file.size > 500 * 1024 * 1024) {
+        setError("File exceeds the 500MB limit.");
         return;
       }
       setSelectedFile(file);
@@ -104,7 +104,7 @@ export function FileDropzone({ onFile, loading }: FileDropzoneProps) {
                 Drop your file here, or{" "}
                 <span className="text-primary">browse</span>
               </p>
-              <p className="text-xs text-neutral-400 mt-1">CSV, XLSX, or JSON · Max 100MB</p>
+              <p className="text-xs text-neutral-400 mt-1">CSV, XLSX, or JSON · Max 500MB</p>
             </div>
           </div>
         )}
