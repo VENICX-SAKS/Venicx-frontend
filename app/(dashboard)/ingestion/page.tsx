@@ -301,7 +301,7 @@ export default function IngestionPage() {
       {/* Record Type Selector */}
       <div className="bg-white border border-neutral-200 rounded-xl p-5">
         <h3 className="text-sm font-semibold text-neutral-900 mb-3">Record Type</h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {([
             { type: "customer", icon: "👤", label: "Customer Records", desc: "Individual people — personal details, contact info" },
             { type: "business", icon: "🏢", label: "Business Records", desc: "Companies — registration, website, contact details" },

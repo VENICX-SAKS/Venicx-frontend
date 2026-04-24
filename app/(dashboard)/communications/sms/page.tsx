@@ -535,7 +535,7 @@ export default function NewSmsCampaignPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <p className="text-sm font-semibold text-blue-700 mb-1">Message Variables</p>
                 <p className="text-xs text-blue-600 mb-3">Click to insert at cursor:</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {VARIABLES.map(v => (
                     <button
                       key={v.key}

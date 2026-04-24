@@ -36,7 +36,7 @@ export function CommList() {
 
         {!isLoading &&
           items.map((item) => (
-            <div key={item.id} className="px-6 py-4 flex items-center gap-4">
+            <div key={item.id} className="px-4 sm:px-6 py-4 flex items-start gap-3 sm:gap-4">
               <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
                 item.channel === "sms" ? "bg-[#EDE9FE]" : "bg-[#D1FAE5]"
               }`}>
@@ -47,7 +47,7 @@ export function CommList() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {item.customer_name ? (
                     <Link
                       href={`/records/${item.customer_id}`}
@@ -59,6 +59,11 @@ export function CommList() {
                     <span className="text-sm font-medium text-neutral-900">Unknown</span>
                   )}
                   <StatusBadge status={item.status} />
+                  {item.cost_amount && (
+                    <span className="text-xs text-neutral-500 sm:hidden">
+                      {formatCurrency(parseFloat(item.cost_amount), "ZAR")}
+                    </span>
+                  )}
                 </div>
                 {item.content_preview && (
                   <p className="text-xs text-neutral-500 truncate mt-0.5">{item.content_preview}</p>
@@ -68,11 +73,6 @@ export function CommList() {
                     {item.sent_at ? formatDate(item.sent_at) : formatDate(item.created_at)}
                     {" · "}{item.provider}
                   </p>
-                  {item.provider_message_id && (
-                    <p className="text-xs text-neutral-300 font-mono truncate max-w-[140px]">
-                      ID: {item.provider_message_id}
-                    </p>
-                  )}
                   {item.delivered_at && (
                     <p className="text-xs text-success">
                       Delivered {formatDate(item.delivered_at)}
@@ -87,7 +87,7 @@ export function CommList() {
               </div>
 
               {item.cost_amount && (
-                <span className="text-xs text-neutral-500 flex-shrink-0">
+                <span className="text-xs text-neutral-500 flex-shrink-0 hidden sm:block">
                   {formatCurrency(parseFloat(item.cost_amount), "ZAR")}
                 </span>
               )}
