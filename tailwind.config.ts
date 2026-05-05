@@ -9,6 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        royal_blue: '#002366',
+        vibrant_orange: '#FF8C00',
         primary: {
           DEFAULT: "#3B5BFF",
           50: "#EEF1FF",
