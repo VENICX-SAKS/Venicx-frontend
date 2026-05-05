@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { LayoutDashboard, Upload, Users, MessageSquare, Settings, Database, X } from "lucide-react";
 
 const navItems = [
-  { href: "/",               label: "Dashboard",      icon: LayoutDashboard },
+  { href: "/dashboard",      label: "Dashboard",      icon: LayoutDashboard },
   { href: "/ingestion",      label: "Data Ingestion", icon: Upload },
   { href: "/records",        label: "Super Records",  icon: Users },
   { href: "/communications", label: "Communications", icon: MessageSquare },
@@ -41,7 +41,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {/* Nav items */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+          const active = pathname === href || pathname.startsWith(href);
           return (
             <Link
               key={href}

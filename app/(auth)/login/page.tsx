@@ -34,7 +34,7 @@ export default function LoginPage() {
       const res = await api.post<LoginResponse>("/api/v1/auth/login", { email, password });
       setToken(res.token);
       // Force a full page reload to ensure auth context picks up the token
-      window.location.href = "/";
+      window.location.href = "/dashboard";
     } catch (e) {
       if (e instanceof ApiError) {
         setError(
