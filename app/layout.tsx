@@ -14,6 +14,9 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "VeniCX",
   description: "Advanced Data Ingestion & Super Record Platform",
+  icons: {
+    icon: "https://img.icons8.com/color/48/hummingbird.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

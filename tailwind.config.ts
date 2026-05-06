@@ -12,10 +12,14 @@ const config: Config = {
         royal_blue: '#002366',
         vibrant_orange: '#FF8C00',
         primary: {
-          DEFAULT: "#3B5BFF",
+          DEFAULT: "#002366",  // royal_blue
           50: "#EEF1FF",
           100: "#DDE3FF",
-          700: "#2D4AE0",
+          700: "#001a4d",
+        },
+        accent: {
+          DEFAULT: "#FF8C00",  // vibrant_orange
+          light: "#FFE5CC",
         },
         sms: {
           DEFAULT: "#8B5CF6",

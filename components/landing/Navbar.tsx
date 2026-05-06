@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { Menu, X } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -27,14 +28,7 @@ export default function Navbar() {
       scrolled || menuOpen ? 'bg-white shadow-md py-3' : 'bg-transparent py-5'
     }`}>
       <div className="container mx-auto px-6 flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white border border-white/20 shadow-lg flex items-center justify-center overflow-hidden">
-            <img src="https://img.icons8.com/color/48/hummingbird.png" alt="VeniCX" className="w-7 h-7 object-contain" referrerPolicy="no-referrer" />
-          </div>
-          <span className={`font-outfit font-black text-xl tracking-tighter transition-colors duration-300 ${
-            scrolled || menuOpen ? 'text-royal_blue' : 'text-white'
-          }`}>VENICX</span>
-        </div>
+        <Logo variant={scrolled || menuOpen ? 'dark' : 'light'} size="md" />
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-8">
@@ -43,6 +37,9 @@ export default function Navbar() {
               scrolled ? 'text-slate-600 hover:text-royal_blue' : 'text-white/80 hover:text-white'
             }`}>{l.label}</a>
           ))}
+          <a href="/login" className={`font-semibold transition-colors ${
+            scrolled ? 'text-slate-600 hover:text-royal_blue' : 'text-white/80 hover:text-white'
+          }`}>Login</a>
           <a href="#apply" className="bg-vibrant_orange hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-bold transition-all hover:scale-105 shadow-lg text-sm">
             Partner Access
           </a>
@@ -72,6 +69,10 @@ export default function Navbar() {
             <a href="#apply" onClick={() => setMenuOpen(false)}
               className="block w-full bg-vibrant_orange text-white text-center py-5 rounded-2xl font-black text-xl shadow-xl">
               Request Partner Access
+            </a>
+            <a href="/login" onClick={() => setMenuOpen(false)}
+              className="block w-full border-2 border-royal_blue text-royal_blue text-center py-5 rounded-2xl font-black text-xl">
+              Partner Login
             </a>
             <p className="text-center text-slate-400 text-sm">Infrastructure for Financial Growth</p>
           </div>

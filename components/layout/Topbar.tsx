@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { CurrentUser } from "@/lib/auth";
 
 const pageTitles: Record<string, string> = {
-  "/": "Dashboard",
+  "/dashboard": "Dashboard",
   "/ingestion": "Data Ingestion",
   "/records": "Super Records",
   "/communications": "Communications",
@@ -23,7 +23,7 @@ export function Topbar({ user, onMenuClick }: TopbarProps) {
   const { logout } = useAuth();
 
   const title = Object.entries(pageTitles).find(([path]) =>
-    path === "/" ? pathname === "/" : pathname.startsWith(path)
+    pathname === path || pathname.startsWith(path + "/")
   )?.[1] ?? "VeniCX";
 
   const initials = user.full_name

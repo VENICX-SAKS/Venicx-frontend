@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Upload, Users, MessageSquare, Settings, Database, X } from "lucide-react";
+import { LayoutDashboard, Upload, Users, MessageSquare, Settings, X } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 const navItems = [
   { href: "/dashboard",      label: "Dashboard",      icon: LayoutDashboard },
@@ -24,15 +25,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     <aside className="w-60 h-full bg-white border-r border-neutral-200 flex flex-col">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-neutral-100 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-[#3B5BFF] rounded-lg flex items-center justify-center">
-            <Database className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-lg font-bold text-neutral-900">VeniCX</span>
-        </div>
+        <Logo size="md" variant="dark" />
         {/* Close button — mobile only */}
         {onClose && (
-          <button onClick={onClose} className="lg:hidden p-1 text-neutral-400 hover:text-neutral-600">
+          <button onClick={onClose} className="lg:hidden p-1 text-neutral-400 hover:text-neutral-600" aria-label="Close menu">
             <X className="w-5 h-5" />
           </button>
         )}
@@ -50,8 +46,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 active
-                  ? "bg-[#EEF1FF] text-[#3B5BFF]"
-                  : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700"
+                  ? "bg-vibrant_orange/10 text-vibrant_orange"
+                  : "text-neutral-500 hover:bg-neutral-50 hover:text-royal_blue"
               )}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
@@ -69,8 +65,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
             pathname.startsWith("/settings")
-              ? "bg-[#EEF1FF] text-[#3B5BFF]"
-              : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700"
+              ? "bg-vibrant_orange/10 text-vibrant_orange"
+              : "text-neutral-500 hover:bg-neutral-50 hover:text-royal_blue"
           )}
         >
           <Settings className="w-4 h-4" />

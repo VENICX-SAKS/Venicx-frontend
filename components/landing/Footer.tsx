@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Globe, Fingerprint, Lock, X } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
@@ -30,11 +31,8 @@ export default function Footer() {
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-12 mb-16 text-center md:text-left">
           <div className="space-y-6">
-            <div className="flex items-center justify-center md:justify-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-royal_blue border border-white/20 shadow-lg flex items-center justify-center overflow-hidden">
-                <img src="https://img.icons8.com/color/48/hummingbird.png" alt="VeniCX" className="w-7 h-7 object-contain" referrerPolicy="no-referrer" />
-              </div>
-              <span className="font-outfit font-black text-2xl tracking-tighter text-royal_blue">VENI CX</span>
+            <div className="flex items-center justify-center md:justify-start">
+              <Logo size="md" variant="dark" />
             </div>
             <p className="text-slate-400 font-black tracking-[0.2em] text-[10px] uppercase">
               Consented Demand. Allocated Performance.
