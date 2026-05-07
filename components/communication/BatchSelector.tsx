@@ -22,13 +22,17 @@ interface BatchSelectorProps {
   selectedBatchIds: string[];
   onSelectionChange: (batchIds: string[]) => void;
   onContactableCountChange: (count: number) => void;
+  messageContent?: string;
+  emailSubject?: string;
 }
 
 export function BatchSelector({ 
   channel, 
   selectedBatchIds, 
   onSelectionChange, 
-  onContactableCountChange 
+  onContactableCountChange,
+  messageContent,
+  emailSubject
 }: BatchSelectorProps) {
   const [batches, setBatches] = useState<CompletedBatch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,11 +226,22 @@ export function BatchSelector({
                         onClick={(e) => e.stopPropagation()}
                       />
                       <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">{batch.filename}</h4>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{batch.filename}</h4>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                              batch.record_type === 'customer'
+                                ? 'bg-blue-50 text-blue-600'
+                                : batch.record_type === 'business'
+                                ? 'bg-purple-50 text-purple-600'
+                                : 'bg-green-50 text-green-600'
+                            }`}>
+                              {batch.record_type || 'Customer'}
+                            </span>
+                          </div>
                           <span className="text-sm text-gray-500">{formatDate(batch.created_at)}</span>
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-sm text-gray-600">
                           {batch.partner_name && (
                             <span className="inline-block bg-gray-100 px-2 py-1 rounded text-xs mr-2">
                               {batch.partner_name}
@@ -300,6 +315,38 @@ export function BatchSelector({
           )}
         </div>
       </div>
+
+      {/* Message Preview */}
+      {messageContent && (
+        <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+            Message Preview
+          </p>
+          <p className="text-sm text-slate-700 font-medium leading-relaxed">
+            {messageContent.length > 160
+              ? `${messageContent.slice(0, 160)}...`
+              : messageContent}
+          </p>
+          {messageContent.length > 0 && (
+            <p className="text-xs text-slate-400 mt-2">
+              {messageContent.length} characters ·{' '}
+              {messageContent.length <= 160 ? '1 SMS' : `${Math.ceil(messageContent.length / 153)} SMS`}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Email Subject Preview */}
+      {emailSubject && (
+        <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+            Subject Preview
+          </p>
+          <p className="text-sm text-slate-700 font-medium leading-relaxed">
+            {emailSubject}
+          </p>
+        </div>
+      )}
     </Card>
   );
 }

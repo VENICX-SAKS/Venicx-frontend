@@ -48,8 +48,8 @@ export default function LeadForm() {
           mobile: form.mobile || undefined,
           business_stage: form.businessStage,
           primary_need: form.primaryNeed,
-          sms_consent: form.consent,
-          email_consent: form.consent,
+          sms_consent: true,  // always true
+          email_consent: true, // always true
         }),
       })
 
@@ -216,12 +216,13 @@ export default function LeadForm() {
                         <input type="tel" placeholder="Mobile Number"
                           value={form.mobile} onChange={e => set('mobile', e.target.value)}
                           className="w-full p-5 rounded-2xl border-2 border-slate-100 focus:border-vibrant_orange outline-none font-bold transition-colors" />
-                        <label className="flex items-start gap-3 cursor-pointer group">
-                          <input type="checkbox" required
-                            checked={form.consent} onChange={e => set('consent', e.target.checked)}
-                            className="mt-1 w-5 h-5 accent-vibrant_orange" />
-                          <span className="text-sm font-medium text-slate-500 group-hover:text-slate-700 transition-colors">
-                            I consent to Veni CX contacting me about business opportunities.
+                        <label className="flex items-start gap-3">
+                          <input type="checkbox"
+                            checked={true}
+                            readOnly
+                            className="mt-1 w-5 h-5 accent-vibrant_orange cursor-default" />
+                          <span className="text-sm font-medium text-slate-500">
+                            I consent to Veni CX contacting me about business opportunities. By submitting this form you agree to be contacted.
                           </span>
                         </label>
                       </div>
