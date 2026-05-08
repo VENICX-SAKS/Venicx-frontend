@@ -637,24 +637,51 @@ export default function EmailCampaignPage() {
               <div className={`border border-neutral-200 rounded-xl overflow-hidden ${
                 previewTab === "mobile" ? "max-w-sm mx-auto" : "w-full"
               }`}>
+                {/* Email client header bar */}
                 <div className="bg-neutral-50 border-b border-neutral-200 px-4 py-3 text-xs text-neutral-500 space-y-0.5">
                   <p><span className="font-medium">From:</span> VeniCX &lt;noreply@venicx.com&gt;</p>
                   <p><span className="font-medium">To:</span> John Doe &lt;john@example.com&gt;</p>
                   <p><span className="font-medium">Subject:</span> {renderedSubject}</p>
                 </div>
-                <div className="bg-white px-8 py-6">
-                  <div className="mb-6">
-                    <span className="text-lg font-bold text-primary">VeniCX</span>
-                  </div>
-                  <div className="text-sm text-neutral-700 whitespace-pre-wrap mb-8 leading-relaxed">
-                    {renderedContent}
-                  </div>
-                  <div className="border-t border-neutral-200 pt-4 text-xs text-neutral-400 space-y-1">
-                    <p>© 2026 VeniCX. All rights reserved.</p>
-                    <p>
-                      If you no longer wish to receive these emails, you can{" "}
-                      <span className="text-primary underline cursor-pointer">unsubscribe</span>.
-                    </p>
+
+                {/* Branded email body — matches the backend wrap_in_template */}
+                <div className="bg-[#F1F5F9] p-6">
+                  <div className="max-w-[560px] mx-auto bg-white rounded-2xl overflow-hidden shadow-md">
+
+                    {/* Header */}
+                    <div className="bg-[#002366] px-8 py-7 flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0">
+                        <img
+                          src="https://img.icons8.com/color/48/hummingbird.png"
+                          alt="VeniCX"
+                          className="w-7 h-7 object-contain"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <span className="text-white font-black text-xl tracking-tight">VENICX</span>
+                    </div>
+
+                    {/* Orange accent */}
+                    <div className="h-1 bg-[#FF8C00]" />
+
+                    {/* Content */}
+                    <div className="px-8 py-9">
+                      <p className="text-sm text-[#334155] leading-relaxed whitespace-pre-wrap">
+                        {renderedContent}
+                      </p>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-8 pb-7 border-t border-[#E2E8F0] pt-5">
+                      <p className="text-xs text-[#94A3B8] leading-relaxed mb-1">
+                        You received this message from <strong className="text-[#64748B]">VeniCX</strong> because you or your business opted in to our communications.
+                      </p>
+                      <p className="text-xs text-[#94A3B8]">
+                        © 2026 VeniCX. All rights reserved. &nbsp;·&nbsp;
+                        <a href="https://venicx.com" className="text-[#002366] no-underline">venicx.com</a>
+                      </p>
+                    </div>
+
                   </div>
                 </div>
               </div>
